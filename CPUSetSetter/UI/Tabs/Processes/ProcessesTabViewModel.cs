@@ -38,6 +38,7 @@ namespace CPUSetSetter.UI.Tabs.Processes
             runningProcessesView.Filter = item => ((ProcessListEntryViewModel)item).Name.Contains(ProcessNameFilter, StringComparison.OrdinalIgnoreCase);
 
             Task.Run(ProcessCpuUsageUpdateLoop);
+            Task.Run(ProcessReapplyLoop);
         }
 
         /// <summary>
@@ -145,6 +146,22 @@ namespace CPUSetSetter.UI.Tabs.Processes
                 });
                 int delayTime = windowIsVisible ? 1000 : 5000; // Poll the CPU usage less often when not visible
                 await Task.Delay(delayTime);
+            }
+        }
+
+        private async Task ProcessReapplyLoop()
+        {
+            while (true)
+            {
+                await Task.Delay(15000);
+                await _dispatcher.InvokeAsync(() =>
+                {
+                    foreach (ProcessListEntryViewModel pEntry in RunningProcesses)
+                    {
+                        if (pEntry.AutoReapply)
+                            pEntry.ReapplyMask();
+                    }
+                });
             }
         }
     }

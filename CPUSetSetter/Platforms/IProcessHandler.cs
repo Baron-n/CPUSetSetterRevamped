@@ -11,5 +11,6 @@ namespace CPUSetSetter.Platforms
         /// <returns>Between 0 and 1 on success. -1 on fail</returns>
         double GetAverageCpuUsage();
         bool ApplyMask(LogicalProcessorMask mask);
+        bool ReapplyMask(LogicalProcessorMask mask);
     }
 }
