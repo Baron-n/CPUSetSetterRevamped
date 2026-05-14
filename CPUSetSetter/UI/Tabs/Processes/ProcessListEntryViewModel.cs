@@ -17,6 +17,7 @@ namespace CPUSetSetter.UI.Tabs.Processes
         public uint Pid { get; }
         public string Name { get; }
         public string ImagePath { get; }
+        public bool AutoReapply { get; set; }
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(AverageCpuPercentageStr))]
@@ -24,9 +25,6 @@ namespace CPUSetSetter.UI.Tabs.Processes
 
         [ObservableProperty]
         private LogicalProcessorMask _mask;
-
-        [ObservableProperty]
-        private bool _autoReapply;
 
         [ObservableProperty]
         private bool _previousApplyFailed = false;
@@ -46,7 +44,7 @@ namespace CPUSetSetter.UI.Tabs.Processes
             LogicalProcessorMask mask = programRule?.Mask ?? LogicalProcessorMask.NoMask;
             SetMask(mask, false);
             _mask = mask; // _mask is already set by SetMask, this just suppresses a warning
-            _autoReapply = programRule?.AutoReapply ?? false;
+            AutoReapply = programRule?.AutoReapply ?? false;
 
             AverageCpuUsage = _processHandler.GetAverageCpuUsage();
         }
@@ -99,21 +97,6 @@ namespace CPUSetSetter.UI.Tabs.Processes
                 oldValue.MaskChanged -= OnMaskEdited;
             newValue.MaskChanged += OnMaskEdited;
             SetMask(newValue, true);
-        }
-
-        partial void OnAutoReapplyChanged(bool value)
-        {
-            if (ImagePath.Length != 0)
-            {
-                ProgramRule? programRule = RuleHelpers.GetProgramRuleOrNull(ImagePath);
-                if (programRule is null)
-                {
-                    // No ProgramRule exists for this process' ImagePath yet. Create a new ProgramRule
-                    programRule = new(ImagePath, Mask, value, true);
-                    AppConfig.Instance.ProgramRules.Add(programRule);
-                }
-                programRule.SetAutoReapply(value, true);
-            }
         }
 
         private void OnMaskEdited(object? sender, EventArgs e)

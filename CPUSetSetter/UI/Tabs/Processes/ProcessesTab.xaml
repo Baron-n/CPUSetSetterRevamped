@@ -100,20 +100,6 @@
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-
-            <!--Force column-->
-            <DataGridTemplateColumn Header="Force"
-                                    CanUserResize="False"
-                                    Width="45">
-                <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                        <CheckBox HorizontalAlignment="Center"
-                                  IsChecked="{Binding AutoReapply, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                  ToolTip="Enable to periodically reapply the Mask if it was changed externally">
-                        </CheckBox>
-                    </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
         </DataGrid.Columns>
     </DataGrid>
 

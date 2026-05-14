@@ -12,7 +12,6 @@ namespace CPUSetSetter.Config.Models
     {
         private readonly HashSet<ProcessListEntryViewModel> runningRuleProcesses = [];
         private bool _isSettingMask = false;
-        private bool _isSettingAutoReapply = false;
         private bool _isRemoved = false;
 
         public string ProgramPath { get; }
@@ -120,32 +119,6 @@ namespace CPUSetSetter.Config.Models
             return allSuccess;
         }
 
-        public void SetAutoReapply(bool autoReapply, bool shouldAutoRemove)
-        {
-            if (_isSettingAutoReapply)
-                return;
-
-            _isSettingAutoReapply = true;
-            try
-            {
-                AutoReapply = autoReapply;
-                // Apply the new AutoReapply state to every process of this Program Rule
-                foreach (ProcessListEntryViewModel process in runningRuleProcesses)
-                {
-                    process.AutoReapply = autoReapply;
-                }
-
-                if (shouldAutoRemove)
-                {
-                    TryAutoRemove();
-                }
-            }
-            finally
-            {
-                _isSettingAutoReapply = false;
-            }
-        }
-
         /// <summary>
         /// Try to remove itself. Removing is not allowed when there is both a matching RuleTemplate and at least one process of this Rule.
         /// When removing is not allowed, set the Rule processes to the mask of the RuleTemplate.
@@ -201,7 +174,12 @@ namespace CPUSetSetter.Config.Models
 
         partial void OnAutoReapplyChanged(bool value)
         {
-            SetAutoReapply(value, false);
+            AutoReapply = value;
+            // Apply the new AutoReapply state to every process of this Program Rule
+            foreach (ProcessListEntryViewModel process in runningRuleProcesses)
+            {
+                process.AutoReapply = value;
+            }
         }
 
         partial void OnMatchingRuleTemplateChanged(RuleTemplate? oldValue, RuleTemplate? newValue)
