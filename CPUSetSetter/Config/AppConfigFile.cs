@@ -158,7 +158,7 @@ namespace CPUSetSetter.Config
             List<ProgramRule> programRules = configJson.ProgramRules.Select(jsonProgramRule =>
             {
                 LogicalProcessorMask mask = logicalProcessorMasks.Single(mask => mask.Name == jsonProgramRule.LogicalProcessorMaskName);
-                return new ProgramRule(jsonProgramRule.ProgramPath, mask, true);
+                return new ProgramRule(jsonProgramRule.ProgramPath, mask, jsonProgramRule.AutoReapply, true);
             }).ToList();
 
             // Construct the RuleTemplate models from the config
@@ -240,7 +240,7 @@ namespace CPUSetSetter.Config
 
                 // Convert the ProgramRules models to JSON objects
                 ProgramRules = config.ProgramRules.Select(programRule =>
-                    new ProgramRuleJson(programRule.ProgramPath, programRule.Mask.Name)
+                    new ProgramRuleJson(programRule.ProgramPath, programRule.Mask.Name, programRule.AutoReapply)
                 ).ToList();
 
                 // Convert the RuleTemplates models to JSON objects
@@ -289,18 +289,21 @@ namespace CPUSetSetter.Config
         {
             public string ProgramPath { get; init; }
             public string LogicalProcessorMaskName { get; init; }
+            public bool AutoReapply { get; init; }
 
             [JsonConstructor]
             private ProgramRuleJson()
             {
                 ProgramPath = string.Empty;
                 LogicalProcessorMaskName = string.Empty;
+                AutoReapply = false;
             }
 
-            public ProgramRuleJson(string programPath, string logicalProcessorMaskName)
+            public ProgramRuleJson(string programPath, string logicalProcessorMaskName, bool autoReapply)
             {
                 ProgramPath = programPath;
                 LogicalProcessorMaskName = logicalProcessorMaskName;
+                AutoReapply = autoReapply;
             }
         }
 
