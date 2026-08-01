@@ -24,9 +24,15 @@ namespace CPUSetSetter.Platforms
                 return;
             _hasStarted = true;
 
-            // Try the low-latency ETW-based listeners first, falling back to polling when they cannot be started
-            if (!TryStartTraceListeners())
-                StartPollingListeners();
+            // Always start the polling listeners as a reliable baseline: they work regardless of elevation,
+            // and new processes must show up in the list even if the trace events are not delivered
+            StartPollingListeners();
+
+            // Additionally try the low-latency ETW trace listeners, which update the list instantly when they work
+            if (TryStartTraceListeners())
+                WindowLogger.Write("Process event trace active, low-latency updates enabled");
+            else
+                WindowLogger.Write("Using 5-second process polling (trace unavailable)");
 
             ListCurrentProcesses();
         }
