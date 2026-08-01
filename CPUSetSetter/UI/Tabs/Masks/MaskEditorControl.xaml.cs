@@ -160,12 +160,6 @@ namespace CPUSetSetter.UI.Tabs.Masks
             InitializeComponent();
 
             // Set up the inner mask
-            int div = 2;
-            while (CpuInfo.LogicalProcessorCount / div > 16)
-            {
-                div += 2;
-            }
-            int columnCount = Math.Max(1, CpuInfo.LogicalProcessorCount / div);
             innerMask = Enumerable.Range(0, CpuInfo.LogicalProcessorCount).Select(i => new MaskBitViewModel(i)).ToList();
 
             // Subscribe to each inner mask's bit, so we can also change the outer mask when the inner changes
@@ -174,14 +168,91 @@ namespace CPUSetSetter.UI.Tabs.Masks
                 maskBit.MaskChanged += OnInnerMaskBitChanged;
             }
 
-            // Apply the innerMask to the Control's UI
-            maskItemsControl.ItemsSource = innerMask.Chunk(columnCount);
+            // Apply the innerMask to the Control's UI, grouped by CPU topology
+            maskItemsControl.ItemsSource = BuildTopologyColumns(innerMask);
             // Hide the checkboxes by default. They will become visible once an outer mask has been set
             maskItemsControl.Visibility = Visibility.Hidden;
             hotkeyGrid.Visibility = Visibility.Hidden;
 
             // Listen for key presses so the Hotkey input can be updated once it is focused
             HotkeyListener.KeyPressed += OnKeyPressed;
+        }
+
+        /// <summary>
+        /// Groups the mask bits into columns by die/CCX, and within each column into visual groups of SMT threads per core.
+        /// Falls back to a simple column count split when die detection failed or there is only a single die.
+        /// </summary>
+        private static List<MaskEditorColumnViewModel> BuildTopologyColumns(List<MaskBitViewModel> innerMask)
+        {
+            IReadOnlyList<LogicalProcessorTopologyInfo> topology = CpuInfo.LogicalProcessorTopology;
+
+            // Group logical processors by physical core
+            Dictionary<int, (int die, List<int> lps)> cores = [];
+            for (int i = 0; i < topology.Count; ++i)
+            {
+                LogicalProcessorTopologyInfo info = topology[i];
+                if (!cores.TryGetValue(info.CoreIndex, out (int die, List<int> lps) core))
+                {
+                    core = (info.DieIndex, []);
+                    cores[info.CoreIndex] = core;
+                }
+                core.lps.Add(i);
+            }
+
+            // Order the cores by die, then by core, and sort each core's threads by SMT thread index
+            List<(int die, List<MaskBitViewModel> threads)> orderedCores = cores
+                .OrderBy(kv => kv.Value.die)
+                .ThenBy(kv => kv.Key)
+                .Select(kv => (
+                    kv.Value.die,
+                    kv.Value.lps.OrderBy(i => topology[i].SMTThreadIndex).Select(i => innerMask[i]).ToList()))
+                .ToList();
+
+            bool hasMultipleDies = topology.Count > 0
+                && topology[0].DieIndex >= 0
+                && topology.Select(t => t.DieIndex).Distinct().Count() >= 2;
+
+            // Desired number of logical processors per column
+            int div = 2;
+            while (CpuInfo.LogicalProcessorCount / div > 16)
+            {
+                div += 2;
+            }
+            int columnSize = Math.Max(1, CpuInfo.LogicalProcessorCount / div);
+
+            string diePrefix = CpuInfo.Manufacturer == Manufacturer.AMD ? "CCD" : "Die";
+
+            List<MaskEditorColumnViewModel> columns = [];
+            List<MaskEditorCoreGroupViewModel> currentColumnCores = [];
+            int currentColumnThreadCount = 0;
+            int currentColumnDie = -1;
+
+            foreach ((int die, List<MaskBitViewModel> threads) in orderedCores)
+            {
+                // Start a new column when the die changes (if multiple dies exist), or when the column would exceed the desired size
+                if (currentColumnCores.Count > 0
+                    && ((hasMultipleDies && die != currentColumnDie) || currentColumnThreadCount + threads.Count > columnSize))
+                {
+                    columns.Add(new MaskEditorColumnViewModel(
+                        hasMultipleDies ? $"{diePrefix} {currentColumnDie}" : string.Empty,
+                        currentColumnCores));
+                    currentColumnCores = [];
+                    currentColumnThreadCount = 0;
+                }
+
+                currentColumnCores.Add(new MaskEditorCoreGroupViewModel(threads));
+                currentColumnThreadCount += threads.Count;
+                currentColumnDie = die;
+            }
+
+            if (currentColumnCores.Count > 0)
+            {
+                columns.Add(new MaskEditorColumnViewModel(
+                    hasMultipleDies ? $"{diePrefix} {currentColumnDie}" : string.Empty,
+                    currentColumnCores));
+            }
+
+            return columns;
         }
 
         private void OnInnerMaskBitChanged(object? sender, MaskBitChangedEventArgs e)

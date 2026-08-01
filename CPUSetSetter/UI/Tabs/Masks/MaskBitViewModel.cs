@@ -43,4 +43,33 @@ namespace CPUSetSetter.UI.Tabs.Masks
             IsEnabled = isEnabled;
         }
     }
+
+    /// <summary>
+    /// A visual group of the SMT threads belonging to a single physical core. Used by the MaskEditorControl.
+    /// </summary>
+    public class MaskEditorCoreGroupViewModel
+    {
+        public IReadOnlyList<MaskBitViewModel> Threads { get; }
+
+        public MaskEditorCoreGroupViewModel(IReadOnlyList<MaskBitViewModel> threads)
+        {
+            Threads = threads;
+        }
+    }
+
+    /// <summary>
+    /// A single column of the mask editor: a die/CCX (or a slice of one) containing its core groups. Used by the MaskEditorControl.
+    /// </summary>
+    public class MaskEditorColumnViewModel
+    {
+        public string Header { get; }
+
+        public IReadOnlyList<MaskEditorCoreGroupViewModel> CoreGroups { get; }
+
+        public MaskEditorColumnViewModel(string header, IReadOnlyList<MaskEditorCoreGroupViewModel> coreGroups)
+        {
+            Header = header;
+            CoreGroups = coreGroups;
+        }
+    }
 }

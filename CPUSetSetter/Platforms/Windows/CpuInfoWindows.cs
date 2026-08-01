@@ -12,6 +12,8 @@ namespace CPUSetSetter.Platforms
 
         public IReadOnlyList<string> LogicalProcessorNames { get; }
 
+        public IReadOnlyList<LogicalProcessorTopologyInfo> LogicalProcessorTopology { get; }
+
         // Default masks are loaded on demand, so that they are only created when needed
         public IReadOnlyList<(string name, List<bool> boolMask)> DefaultLogicalProcessorMasks { get; }
 
@@ -28,6 +30,7 @@ namespace CPUSetSetter.Platforms
         {
             Manufacturer = GetManufacturer();
             LogicalProcessorNames = GetLogicalProcessorNames();
+            LogicalProcessorTopology = GetLogicalProcessorTopology();
             DefaultLogicalProcessorMasks = GetDefaultLogicalProcessorMasks();
         }
 
@@ -102,6 +105,39 @@ namespace CPUSetSetter.Platforms
             }
 
             return logicalProcessorNames;
+        }
+
+        private List<LogicalProcessorTopologyInfo> GetLogicalProcessorTopology()
+        {
+            List<ProcessorRelationship> dieRelations = GetDieRelationships();
+
+            List<LogicalProcessorTopologyInfo> topology = [];
+            for (int i = 0; i < LogicalProcessorNames.Count; ++i)
+            {
+                UIntPtr logicalProcessorMask = (UIntPtr)1 << i;
+
+                // Find the physical core this logical processor belongs to
+                int coreIndex = _coreRelations.FindIndex(core => (core.Affinities[0] & logicalProcessorMask) != 0);
+
+                // Count the SMT thread index within its core
+                int smtThreadIndex = 0;
+                if (coreIndex >= 0)
+                {
+                    for (int j = 0; j < i; ++j)
+                    {
+                        UIntPtr otherMask = (UIntPtr)1 << j;
+                        if ((_coreRelations[coreIndex].Affinities[0] & otherMask) != 0)
+                            smtThreadIndex++;
+                    }
+                }
+
+                // Find the die/CCX this logical processor belongs to (-1 if die detection failed)
+                int dieIndex = dieRelations.FindIndex(die => (die.Affinities[0] & logicalProcessorMask) != 0);
+
+                bool isSMT = coreIndex >= 0 && _coreRelations[coreIndex].IsSMT;
+                topology.Add(new LogicalProcessorTopologyInfo(i, dieIndex, coreIndex, smtThreadIndex, isSMT));
+            }
+            return topology;
         }
 
         private List<(string name, List<bool> boolMask)> GetDefaultLogicalProcessorMasks()

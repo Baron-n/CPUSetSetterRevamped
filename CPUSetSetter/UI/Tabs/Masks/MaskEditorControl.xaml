@@ -20,7 +20,7 @@
             <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
 
-        <!--Logical processor list of the currently selected mask-->
+        <!--Logical processor list of the currently selected mask, grouped by die/CCX with SMT threads grouped per core-->
         <ItemsControl x:Name="maskItemsControl"
                       Grid.Row="0">
 
@@ -32,46 +32,85 @@
 
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <ItemsControl ItemsSource="{Binding}" Width="Auto" MinWidth="105">
+                    <StackPanel Margin="0,0,15,0" MinWidth="105">
 
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Margin="0,0,15,0" Orientation="Vertical"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
+                        <!--Die/CCX header, hidden when there is only one die-->
+                        <TextBlock Text="{Binding Header}"
+                                   HorizontalAlignment="Center"
+                                   FontWeight="Bold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Header}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
 
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <!--Border with mouse-click and hover events-->
-                                <Border BorderThickness="1"
-                                        Background="Transparent"
-                                        MouseEnter="MaskBitBorder_MouseEnter"
-                                        MouseLeftButtonDown="MaskBitBorder_MouseLeftButtonDown">
-                                    <BulletDecorator Margin="1.5">
-                                        <BulletDecorator.Bullet>
-                                            <!--The CheckBox is toggled by the Border's events, IsEnabled is False-->
-                                            <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="False"/>
-                                        </BulletDecorator.Bullet>
+                        <ItemsControl ItemsSource="{Binding CoreGroups}" Margin="0,4,0,0">
 
-                                        <TextBlock Margin="5,0,0,0" Text="{Binding LogicalProcessorName}"/>
-                                    </BulletDecorator>
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Vertical"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
 
-                                    <!--Mouse Hover effect-->
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Style.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}"/>
-                                                    <Setter Property="BorderBrush" Value="{DynamicResource HoverBorderBrush}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <!--Visual group for the SMT threads of one core-->
+                                    <Border BorderThickness="1"
+                                            BorderBrush="{DynamicResource DisabledBorderBrush}"
+                                            Padding="2"
+                                            Margin="0,0,0,2">
+                                        <ItemsControl ItemsSource="{Binding Threads}">
 
-                    </ItemsControl>
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Vertical"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <!--Border with mouse-click and hover events-->
+                                                    <Border BorderThickness="1"
+                                                            Background="Transparent"
+                                                            MouseEnter="MaskBitBorder_MouseEnter"
+                                                            MouseLeftButtonDown="MaskBitBorder_MouseLeftButtonDown">
+                                                        <BulletDecorator Margin="1.5">
+                                                            <BulletDecorator.Bullet>
+                                                                <!--The CheckBox is toggled by the Border's events, IsEnabled is False-->
+                                                                <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="False"/>
+                                                            </BulletDecorator.Bullet>
+
+                                                            <TextBlock Margin="5,0,0,0" Text="{Binding LogicalProcessorName}"/>
+                                                        </BulletDecorator>
+
+                                                        <!--Mouse Hover effect-->
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Style.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}"/>
+                                                                        <Setter Property="BorderBrush" Value="{DynamicResource HoverBorderBrush}"/>
+                                                                    </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+
+                                        </ItemsControl>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+
+                        </ItemsControl>
+                    </StackPanel>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

@@ -17,6 +17,8 @@ namespace CPUSetSetter.Platforms
 
         public static IReadOnlyList<(string name, List<bool> boolMask)> DefaultLogicalProcessorMasks => Default.DefaultLogicalProcessorMasks;
 
+        public static IReadOnlyList<LogicalProcessorTopologyInfo> LogicalProcessorTopology => Default.LogicalProcessorTopology;
+
         public static bool IsSupported => Default.IsSupported;
 
         public static bool DieDetectionFailed => Default.DieDetectionFailed;
@@ -33,9 +35,39 @@ namespace CPUSetSetter.Platforms
     {
         Manufacturer Manufacturer { get; }
         IReadOnlyList<string> LogicalProcessorNames { get; }
+        IReadOnlyList<LogicalProcessorTopologyInfo> LogicalProcessorTopology { get; }
         IReadOnlyList<(string name, List<bool> boolMask)> DefaultLogicalProcessorMasks { get; }
         bool IsSupported { get; }
         bool DieDetectionFailed { get; }
+    }
+
+    /// <summary>
+    /// Topology information for a single logical processor: which die/CCX, physical core and SMT thread it belongs to.
+    /// </summary>
+    public class LogicalProcessorTopologyInfo
+    {
+        public int LogicalProcessorIndex { get; }
+
+        /// <summary>Index of the die/CCX this logical processor belongs to, or -1 when die detection failed or is not applicable.</summary>
+        public int DieIndex { get; }
+
+        /// <summary>Index of the physical core this logical processor belongs to.</summary>
+        public int CoreIndex { get; }
+
+        /// <summary>Index of this logical processor within its core (0-based; 1 for the SMT sibling).</summary>
+        public int SMTThreadIndex { get; }
+
+        /// <summary>Whether the physical core has more than one thread (Hyper-Threading / SMT).</summary>
+        public bool IsSMT { get; }
+
+        public LogicalProcessorTopologyInfo(int logicalProcessorIndex, int dieIndex, int coreIndex, int smtThreadIndex, bool isSMT)
+        {
+            LogicalProcessorIndex = logicalProcessorIndex;
+            DieIndex = dieIndex;
+            CoreIndex = coreIndex;
+            SMTThreadIndex = smtThreadIndex;
+            IsSMT = isSMT;
+        }
     }
 
     public enum Manufacturer
