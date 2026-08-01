@@ -2,6 +2,20 @@
 
 ## Revamped
 
+### v1.0.0
+
+#### New features
+- **Priority class per rule.** Each program rule now has a Priority setting (Idle / Below Normal / Normal / Above Normal / High / Realtime). It is applied immediately when the rule matches, and the OS privilege needed for High/Realtime is enabled on demand.
+- **Mask editor grouped by CPU topology.** The mask editor now lays out cores by die/CCX (labeled "CCD n" on AMD, "Die n" elsewhere) and visually boxes the SMT threads of each physical core, so you can see at a glance which logical processors share a core. Falls back to a simple split when die detection isn't available.
+- **Instant process start/stop events.** The process list now updates the moment a process starts or exits (via Windows ETW trace events) instead of every 5 seconds, so rules apply sooner.
+- **Always run as administrator.** The app now requires elevation so every feature works reliably (CPU Sets on other processes, the ETW event trace, and priority changes all need admin rights). Launching shows a single UAC prompt; the auto-start task already runs elevated, so no extra prompt at logon.
+
+#### UI
+- **Priority column** in the Rules tab, with a dropdown when creating/editing a rule.
+
+#### Internal
+- CPU Set fixes, per-core usage heatmap, and live restriction read-back (see below).
+
 ### CPU Set fixes
 - **CPU Sets now apply to existing threads.** The process default CPU Set only constrains threads created *after* it is set, so threads already running never moved. CPU Set Setter Revamped now pins every existing thread of the process to the CPU Set as well (`SetThreadSelectedCpuSets`), and releases them when the mask is cleared.
 - **Affinity and CPU Sets no longer conflict.** When a mask is applied, the other restriction type is always cleared first. Previously a leftover Affinity could produce an empty intersection with a CPU Set, leaving threads stuck on the Affinity's cores.
