@@ -5,6 +5,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:local="clr-namespace:CPUSetSetter.UI.Tabs.Rules"
       xmlns:config="clr-namespace:CPUSetSetter.Config.Models"
+      xmlns:conv="clr-namespace:CPUSetSetter.UI.Converters"
       xmlns:dd="clr-namespace:GongSolutions.Wpf.DragDrop;assembly=GongSolutions.Wpf.DragDrop"
       d:DataContext="{d:DesignInstance Type=local:RulesTabViewModel}"
       mc:Ignorable="d"
@@ -13,6 +14,7 @@
     <Grid.Resources>
         <BitmapImage x:Key="RemoveImageSource" UriSource="pack://application:,,,/CPUSetSetter;component/remove.png"/>
         <BitmapImage x:Key="ReapplyImageSource" UriSource="pack://application:,,,/CPUSetSetter;component/reapply.png"/>
+        <conv:EnumDisplayNameConverter x:Key="EnumDisplayNameConverter"/>
     </Grid.Resources>
 
     <Grid.RowDefinitions>
@@ -76,6 +78,25 @@
                                       IsChecked="{Binding AutoReapply, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                       ToolTip="Enable to periodically reapply the Mask if it was changed externally">
                             </CheckBox>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!--Priority column-->
+                <DataGridTemplateColumn Header="Priority"
+                                        IsReadOnly="True"
+                                        Width="110"
+                                        SortMemberPath="PriorityClass">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding Source={x:Static config:ProgramRule.PriorityClassOptions}}"
+                                      SelectedValue="{Binding PriorityClass, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource EnumDisplayNameConverter}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

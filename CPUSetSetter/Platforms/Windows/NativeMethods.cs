@@ -89,7 +89,73 @@ namespace CPUSetSetter.Platforms
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP RelationshipType, IntPtr Buffer, ref uint ReturnedLength);
 
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetPriorityClass(SafeProcessHandle hProcess, uint dwPriorityClass);
+
+        [LibraryImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);
+
+        [LibraryImport("advapi32.dll", EntryPoint = "LookupPrivilegeValueW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool LookupPrivilegeValue(string? lpSystemName, string lpName, out LUID lpLuid);
+
+        [LibraryImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool AdjustTokenPrivileges(IntPtr TokenHandle, [MarshalAs(UnmanagedType.Bool)] bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool CloseHandle(IntPtr hObject);
+
+        [LibraryImport("kernel32.dll")]
+        public static partial IntPtr GetCurrentProcess();
+
         public const uint TH32CS_SNAPTHREAD = 0x00000004;
+
+        public const uint IDLE_PRIORITY_CLASS = 0x00000040;
+        public const uint BELOW_NORMAL_PRIORITY_CLASS = 0x00004000;
+        public const uint NORMAL_PRIORITY_CLASS = 0x00000020;
+        public const uint ABOVE_NORMAL_PRIORITY_CLASS = 0x00008000;
+        public const uint HIGH_PRIORITY_CLASS = 0x00000080;
+        public const uint REALTIME_PRIORITY_CLASS = 0x00000100;
+
+        public const uint SE_PRIVILEGE_ENABLED = 0x00000002;
+        public const uint TOKEN_ADJUST_PRIVILEGES = 0x0020;
+        public const uint TOKEN_QUERY = 0x0008;
+
+        /// <summary>
+        /// Enable SeIncreaseBasePriorityPrivilege in the current process token so that
+        /// SetPriorityClass can set High or Realtime priority
+        /// </summary>
+        public static bool EnableIncreaseBasePriorityPrivilege()
+        {
+            if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, out IntPtr tokenHandle) || tokenHandle == IntPtr.Zero)
+                return false;
+
+            try
+            {
+                if (!LookupPrivilegeValue(null, "SeIncreaseBasePriorityPrivilege", out LUID luid))
+                    return false;
+
+                TOKEN_PRIVILEGES tp = new()
+                {
+                    PrivilegeCount = 1,
+                    Privileges = new LUID_AND_ATTRIBUTES
+                    {
+                        Luid = luid,
+                        Attributes = SE_PRIVILEGE_ENABLED,
+                    }
+                };
+
+                return AdjustTokenPrivileges(tokenHandle, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
+            }
+            finally
+            {
+                CloseHandle(tokenHandle);
+            }
+        }
     }
 
     [Flags]
@@ -238,4 +304,25 @@ namespace CPUSetSetter.Platforms
     {
         CpuSetInformation = 0
     }
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct LUID
+{
+    public uint LowPart;
+    public int HighPart;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct LUID_AND_ATTRIBUTES
+{
+    public LUID Luid;
+    public uint Attributes;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct TOKEN_PRIVILEGES
+{
+    public uint PrivilegeCount;
+    public LUID_AND_ATTRIBUTES Privileges;
 }

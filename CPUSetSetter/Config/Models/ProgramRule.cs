@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CPUSetSetter.Util;
 using CPUSetSetter.UI.Tabs.Processes;
+using System.Diagnostics;
 
 
 namespace CPUSetSetter.Config.Models
@@ -27,16 +28,33 @@ namespace CPUSetSetter.Config.Models
         [ObservableProperty]
         private bool _autoReapply;
 
+        [ObservableProperty]
+        private ProcessPriorityClass? _priorityClass;
+
         public bool HasRunningProcesses => runningRuleProcesses.Count >= 1;
         public bool IsDeviatingFromRuleTemplate => MatchingRuleTemplate is not null && MatchingRuleTemplate.Mask != Mask;
 
-        public ProgramRule(string programPath, LogicalProcessorMask mask, bool autoReapply, bool skipSetup)
+        public static IEnumerable<ProcessPriorityClass?> PriorityClassOptions =>
+        [
+            null,
+            ProcessPriorityClass.Idle,
+            ProcessPriorityClass.BelowNormal,
+            ProcessPriorityClass.Normal,
+            ProcessPriorityClass.AboveNormal,
+            ProcessPriorityClass.High,
+            ProcessPriorityClass.RealTime,
+        ];
+
+        public ProgramRule(string programPath, LogicalProcessorMask mask, bool autoReapply, bool skipSetup,
+            ProcessPriorityClass? priorityClass = null)
         {
             ProgramPath = programPath;
             _mask = mask;
             _autoReapply = autoReapply;
+            _priorityClass = priorityClass;
 
             AddAllRunningProcesses();
+            ApplyPriorityToAllRunningProcesses();
             if (!skipSetup)
             {
                 TryFindMatchingRuleTemplate();
@@ -54,7 +72,21 @@ namespace CPUSetSetter.Config.Models
         public void AddRunningProcess(ProcessListEntryViewModel process)
         {
             runningRuleProcesses.Add(process);
+            ApplyPriorityToProcess(process);
             OnPropertyChanged(nameof(HasRunningProcesses));
+        }
+
+        private void ApplyPriorityToProcess(ProcessListEntryViewModel process)
+        {
+            process.ApplyPriority(PriorityClass);
+        }
+
+        private void ApplyPriorityToAllRunningProcesses()
+        {
+            foreach (ProcessListEntryViewModel process in runningRuleProcesses)
+            {
+                ApplyPriorityToProcess(process);
+            }
         }
 
         /// <summary>
@@ -104,6 +136,8 @@ namespace CPUSetSetter.Config.Models
                 {
                     if (!process.SetMask(newMask, false))
                         allSuccess = false;
+                    // Apply priority immediately alongside the mask
+                    process.ApplyPriority(PriorityClass);
                 }
 
                 // When requested, this is a NoMask, AutoReapply is off, and there is no matching RuleTemplate, remove this ProgramRule
@@ -180,6 +214,11 @@ namespace CPUSetSetter.Config.Models
             {
                 process.AutoReapply = value;
             }
+        }
+
+        partial void OnPriorityClassChanged(ProcessPriorityClass? value)
+        {
+            ApplyPriorityToAllRunningProcesses();
         }
 
         partial void OnMatchingRuleTemplateChanged(RuleTemplate? oldValue, RuleTemplate? newValue)

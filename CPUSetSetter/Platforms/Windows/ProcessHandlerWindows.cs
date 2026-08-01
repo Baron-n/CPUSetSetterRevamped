@@ -2,6 +2,7 @@ using CPUSetSetter.Config.Models;
 using CPUSetSetter.UI.Tabs.Processes;
 using Microsoft.Win32.SafeHandles;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 
@@ -455,6 +456,37 @@ namespace CPUSetSetter.Platforms.Windows
             }
             parts.Add(start == prev ? $"{start}" : $"{start}-{prev}");
             return string.Join(",", parts);
+        }
+
+        public bool ApplyPriority(ProcessPriorityClass? priorityClass)
+        {
+            if (priorityClass is null)
+                return true;
+
+            if (!AquireSetInfoHandle(out SafeProcessHandle setInfoHandle))
+                return false;
+
+            // Realtime and High priority require SeIncreaseBasePriorityPrivilege
+            if (priorityClass is ProcessPriorityClass.RealTime or ProcessPriorityClass.High)
+                NativeMethods.EnableIncreaseBasePriorityPrivilege();
+
+            uint priorityClassFlag = priorityClass switch
+            {
+                ProcessPriorityClass.Idle => NativeMethods.IDLE_PRIORITY_CLASS,
+                ProcessPriorityClass.BelowNormal => NativeMethods.BELOW_NORMAL_PRIORITY_CLASS,
+                ProcessPriorityClass.Normal => NativeMethods.NORMAL_PRIORITY_CLASS,
+                ProcessPriorityClass.AboveNormal => NativeMethods.ABOVE_NORMAL_PRIORITY_CLASS,
+                ProcessPriorityClass.High => NativeMethods.HIGH_PRIORITY_CLASS,
+                ProcessPriorityClass.RealTime => NativeMethods.REALTIME_PRIORITY_CLASS,
+                _ => NativeMethods.NORMAL_PRIORITY_CLASS,
+            };
+
+            bool success = NativeMethods.SetPriorityClass(setInfoHandle, priorityClassFlag);
+            if (success)
+                WindowLogger.Write($"Set priority of '{_executableName}' to {priorityClass}");
+            else
+                WindowLogger.Write($"ERROR: Could not set priority of '{_executableName}': {new Win32Exception(Marshal.GetLastWin32Error()).Message}");
+            return success;
         }
 
         private bool AquireSetLimitedInfoHandle(out SafeProcessHandle setLimitedInfoHandle)

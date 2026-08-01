@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CPUSetSetter.Config.Models;
 using CPUSetSetter.Util;
 using Microsoft.Win32;
+using System.Diagnostics;
 
 
 namespace CPUSetSetter.UI.Tabs.Rules
@@ -17,6 +18,9 @@ namespace CPUSetSetter.UI.Tabs.Rules
 
         [ObservableProperty]
         private LogicalProcessorMask _selectedMask = LogicalProcessorMask.NoMask;
+
+        [ObservableProperty]
+        private ProcessPriorityClass? _selectedPriorityClass;
 
         public bool CanCreate => RulePath.Length > 0 && !AppConfig.Instance.ProgramRules.Any(existingRule => RuleHelpers.PathsEqual(existingRule.ProgramPath, RulePath));
 
@@ -37,7 +41,7 @@ namespace CPUSetSetter.UI.Tabs.Rules
         private void CreateProgramRule()
         {
             // Create, add and apply the new ProgramRule
-            ProgramRule programRule = new(RulePath, SelectedMask, false, false);
+            ProgramRule programRule = new(RulePath, SelectedMask, false, false, SelectedPriorityClass);
             AppConfig.Instance.ProgramRules.Add(programRule);
             programRule.SetMask(SelectedMask, false);
             CloseWindow();

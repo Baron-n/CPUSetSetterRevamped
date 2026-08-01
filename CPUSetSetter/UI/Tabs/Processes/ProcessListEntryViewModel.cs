@@ -5,6 +5,7 @@ using CPUSetSetter.Platforms;
 using CPUSetSetter.UI.Tabs.Processes.CoreUsage;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Data;
 using CoreUsageModel = CPUSetSetter.UI.Tabs.Processes.CoreUsage.CoreUsage;
 
@@ -124,6 +125,14 @@ namespace CPUSetSetter.UI.Tabs.Processes
                 return;
 
             PreviousApplyFailed = !_processHandler.ReapplyMask(Mask);
+        }
+
+        /// <summary>
+        /// Apply a priority class to this process. Null leaves it untouched
+        /// </summary>
+        public void ApplyPriority(ProcessPriorityClass? priorityClass)
+        {
+            _processHandler.ApplyPriority(priorityClass);
         }
 
         public bool SetMask(LogicalProcessorMask newMask, bool updateRule)

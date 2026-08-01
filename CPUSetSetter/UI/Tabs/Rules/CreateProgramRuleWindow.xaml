@@ -5,15 +5,20 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CPUSetSetter.UI.Tabs.Rules"
         xmlns:config="clr-namespace:CPUSetSetter.Config.Models"
+        xmlns:conv="clr-namespace:CPUSetSetter.UI.Converters"
         d:DataContext="{d:DesignInstance Type=local:CreateProgramRuleWindowViewModel}"
         mc:Ignorable="d"
         FocusManager.FocusedElement="{Binding ElementName=rulePathInput}"
         Title="Create a new Program Rule"
         WindowStartupLocation="CenterOwner"
-        MinHeight="250"
-        MaxHeight="250"
+        MinHeight="300"
+        MaxHeight="300"
         Width="900"
         MinWidth="700">
+
+    <Window.Resources>
+        <conv:EnumDisplayNameConverter x:Key="EnumDisplayNameConverter"/>
+    </Window.Resources>
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -32,6 +37,8 @@
 
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
+                <RowDefinition Height="24"/>
+                <RowDefinition Height="3"/>
                 <RowDefinition Height="24"/>
                 <RowDefinition Height="3"/>
                 <RowDefinition Height="24"/>
@@ -62,6 +69,19 @@
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBlock Grid.Row="4" Grid.Column="0"
+                       Text="Priority:"
+                       VerticalAlignment="Center"/>
+            <ComboBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="7,0,0,0"
+                      ItemsSource="{Binding Source={x:Static config:ProgramRule.PriorityClassOptions}}"
+                      SelectedValue="{Binding SelectedPriorityClass, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Converter={StaticResource EnumDisplayNameConverter}}"/>
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>

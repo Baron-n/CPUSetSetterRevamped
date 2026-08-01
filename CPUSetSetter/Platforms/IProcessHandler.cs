@@ -1,4 +1,5 @@
 ﻿using CPUSetSetter.Config.Models;
+using System.Diagnostics;
 
 
 namespace CPUSetSetter.Platforms
@@ -24,5 +25,10 @@ namespace CPUSetSetter.Platforms
         /// Returns null if the process is not accessible
         /// </summary>
         string? GetCurrentRestrictionInfo();
+
+        /// <summary>
+        /// Set the priority class of the process. Pass null to leave it untouched
+        /// </summary>
+        bool ApplyPriority(ProcessPriorityClass? priorityClass);
     }
 }

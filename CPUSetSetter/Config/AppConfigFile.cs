@@ -2,6 +2,7 @@
 using CPUSetSetter.Platforms;
 using CPUSetSetter.Themes;
 using CPUSetSetter.UI.Tabs.Processes;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -158,7 +159,10 @@ namespace CPUSetSetter.Config
             List<ProgramRule> programRules = configJson.ProgramRules.Select(jsonProgramRule =>
             {
                 LogicalProcessorMask mask = logicalProcessorMasks.Single(mask => mask.Name == jsonProgramRule.LogicalProcessorMaskName);
-                return new ProgramRule(jsonProgramRule.ProgramPath, mask, jsonProgramRule.AutoReapply, true);
+                ProcessPriorityClass? priorityClass = jsonProgramRule.PriorityClass is null
+                    ? null
+                    : Enum.Parse<ProcessPriorityClass>(jsonProgramRule.PriorityClass);
+                return new ProgramRule(jsonProgramRule.ProgramPath, mask, jsonProgramRule.AutoReapply, true, priorityClass);
             }).ToList();
 
             // Construct the RuleTemplate models from the config
@@ -240,7 +244,11 @@ namespace CPUSetSetter.Config
 
                 // Convert the ProgramRules models to JSON objects
                 ProgramRules = config.ProgramRules.Select(programRule =>
-                    new ProgramRuleJson(programRule.ProgramPath, programRule.Mask.Name, programRule.AutoReapply)
+                    new ProgramRuleJson(
+                        programRule.ProgramPath,
+                        programRule.Mask.Name,
+                        programRule.AutoReapply,
+                        programRule.PriorityClass?.ToString())
                 ).ToList();
 
                 // Convert the RuleTemplates models to JSON objects
@@ -290,6 +298,7 @@ namespace CPUSetSetter.Config
             public string ProgramPath { get; init; }
             public string LogicalProcessorMaskName { get; init; }
             public bool AutoReapply { get; init; }
+            public string? PriorityClass { get; init; } // null = default (don't change priority)
 
             [JsonConstructor]
             private ProgramRuleJson()
@@ -299,11 +308,13 @@ namespace CPUSetSetter.Config
                 AutoReapply = false;
             }
 
-            public ProgramRuleJson(string programPath, string logicalProcessorMaskName, bool autoReapply)
+            public ProgramRuleJson(string programPath, string logicalProcessorMaskName, bool autoReapply,
+                string? priorityClass = null)
             {
                 ProgramPath = programPath;
                 LogicalProcessorMaskName = logicalProcessorMaskName;
                 AutoReapply = autoReapply;
+                PriorityClass = priorityClass;
             }
         }
 
