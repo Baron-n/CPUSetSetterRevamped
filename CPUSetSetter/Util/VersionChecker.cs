@@ -18,9 +18,6 @@ namespace CPUSetSetter.Util
     {
         public static VersionChecker Instance { get; } = new();
 
-        // The app version is only set in Releases. During development it will be the default 1.0.0.0
-        private static Version DevVersion => new(1, 0, 0, 0);
-
         [ObservableProperty]
         private bool _newVersionAvailable;
 
@@ -33,12 +30,21 @@ namespace CPUSetSetter.Util
         {
             get
             {
-                if (AppVersion is not null)
+                string? informationalVersion = Assembly.GetEntryAssembly()
+                    ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                    ?.InformationalVersion;
+
+                if (!string.IsNullOrEmpty(informationalVersion))
                 {
-                    if (AppVersion == DevVersion)
-                        return "Dev";
-                    return $"v{AppVersion}";
+                    // Strip any SourceLink build metadata (e.g. "1.0.0+abcdef")
+                    int plusIndex = informationalVersion.IndexOf('+');
+                    if (plusIndex >= 0)
+                        informationalVersion = informationalVersion[..plusIndex];
+                    return $"v{informationalVersion}";
                 }
+
+                if (AppVersion is not null)
+                    return $"v{AppVersion}";
                 return "unknown";
             }
         }
@@ -48,12 +54,7 @@ namespace CPUSetSetter.Util
         public void RunVersionChecker()
         {
             if (AppVersion is not null)
-            {
-                if (AppVersion == DevVersion)
-                    VersionCheckState = "Version check disabled (Dev)";
-                else
-                    Task.Run(RunUpdateChecker); // Only run the update checker when this app is properly versioned
-            }
+                Task.Run(RunUpdateChecker); // Run the update checker when this app is properly versioned
         }
 
         public static void OpenLatestReleasePage()

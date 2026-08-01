@@ -2,6 +2,11 @@
 
 ## Revamped
 
+### v2.0.0
+
+#### Bug fixes
+- **Version display and update check fixed.** The app previously misread the released version as a development build, showing "Dev" in the Settings tab and never checking for updates. It now reports the real version (e.g. `v2.0.0`) and runs the update check against the GitHub releases page.
+
 ### v1.0.0
 
 #### New features
