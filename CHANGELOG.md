@@ -2,7 +2,10 @@
 
 ## Revamped
 
-### v2.0.0
+### v2.5.0
+
+#### New features
+- **No CPU usage polling while in the system tray.** When the app is minimized to the tray, per-process CPU usage, per-core usage and live sorting are fully paused (not just slowed down), so the app uses no measurable CPU in the background. Updates resume as soon as the window is shown again.
 
 #### Bug fixes
 - **Version display and update check fixed.** The app previously misread the released version as a development build, showing "Dev" in the Settings tab and never checking for updates. It now reports the real version (e.g. `v2.0.0`) and runs the update check against the GitHub releases page.

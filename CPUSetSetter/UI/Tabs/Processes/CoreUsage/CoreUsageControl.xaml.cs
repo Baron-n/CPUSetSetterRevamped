@@ -140,32 +140,36 @@ namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
             bool[] parkedValues = new bool[coreUsages.Count];
             while (true)
             {
-                for (int i = 0; i < coreUsages.Count; ++i)
-                {
-                    // Get the Utility% of each logical processor, and clamp it between 0.0-1.0
-                    utilityValues[i] = Math.Clamp(utilityCounters[i].NextValue() / 100f, 0f, 1f);
+                // Pause the core usage sampling while minimized to the system tray, to reduce CPU usage in the background
+                bool windowIsVisible = await dispatcher.InvokeAsync(() =>
+                    App.Current.MainWindow.Visibility == Visibility.Visible);
 
-                    // Get the Parking Status of each logical processor. 1.0 is parked, 0.0 is not parked.
-                    if (parkingCounters is not null)
-                        parkedValues[i] = parkingCounters[i].NextValue() > 0.5f; // treat >0.5 as parked
-                    else
-                        parkedValues[i] = false;
-                }
-
-                bool windowIsVisible = false;
-                // Apply the new values on the dispatcher to make sure changes are done in the same UI frame
-                await dispatcher.InvokeAsync(() =>
+                if (windowIsVisible)
                 {
-                    windowIsVisible = App.Current.MainWindow.Visibility == Visibility.Visible;
                     for (int i = 0; i < coreUsages.Count; ++i)
                     {
-                        coreUsages[i].Utility = utilityValues[i];
-                        coreUsages[i].IsParked = parkedValues[i];
-                    }
-                });
+                        // Get the Utility% of each logical processor, and clamp it between 0.0-1.0
+                        utilityValues[i] = Math.Clamp(utilityCounters[i].NextValue() / 100f, 0f, 1f);
 
-                int delayTime = windowIsVisible ? 1500 : 6000; // Poll the CPU usage less often when not visible
-                await Task.Delay(delayTime);
+                        // Get the Parking Status of each logical processor. 1.0 is parked, 0.0 is not parked.
+                        if (parkingCounters is not null)
+                            parkedValues[i] = parkingCounters[i].NextValue() > 0.5f; // treat >0.5 as parked
+                        else
+                            parkedValues[i] = false;
+                    }
+
+                    // Apply the new values on the dispatcher to make sure changes are done in the same UI frame
+                    await dispatcher.InvokeAsync(() =>
+                    {
+                        for (int i = 0; i < coreUsages.Count; ++i)
+                        {
+                            coreUsages[i].Utility = utilityValues[i];
+                            coreUsages[i].IsParked = parkedValues[i];
+                        }
+                    });
+                }
+
+                await Task.Delay(1500);
             }
         }
     }

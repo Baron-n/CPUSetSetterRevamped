@@ -16,6 +16,8 @@ namespace CPUSetSetter.UI.Tabs.Processes
 
         private readonly Dispatcher _dispatcher;
         private readonly ListCollectionView runningProcessesView;
+        private bool _sortingPausedByCtrl;
+        private bool _sortingPausedByTray;
 
         public static PausableObservableCollection<ProcessListEntryViewModel> RunningProcesses { get; } = [];
 
@@ -72,6 +74,7 @@ namespace CPUSetSetter.UI.Tabs.Processes
         /// </summary>
         public void PauseListUpdates()
         {
+            _sortingPausedByCtrl = true;
             if (runningProcessesView != null)
             {
                 runningProcessesView.IsLiveSorting = false;
@@ -84,10 +87,12 @@ namespace CPUSetSetter.UI.Tabs.Processes
         /// </summary>
         public void ResumeListUpdates()
         {
+            _sortingPausedByCtrl = false;
             if (runningProcessesView != null)
             {
-                RunningProcesses.SuppressNotifications(false);
-                runningProcessesView.IsLiveSorting = true;
+                if (!_sortingPausedByTray)
+                    RunningProcesses.SuppressNotifications(false);
+                runningProcessesView.IsLiveSorting = !_sortingPausedByTray;
             }
         }
 
@@ -149,6 +154,28 @@ namespace CPUSetSetter.UI.Tabs.Processes
                 await _dispatcher.InvokeAsync(() =>
                 {
                     windowIsVisible = App.Current.MainWindow.Visibility == Visibility.Visible;
+
+                    // Pause CPU usage, per-core usage and live sorting while minimized to the system tray,
+                    // to reduce CPU usage in the background
+                    if (!windowIsVisible)
+                    {
+                        _sortingPausedByTray = true;
+                        runningProcessesView.IsLiveSorting = false;
+                        RunningProcesses.SuppressNotifications(true);
+                        return;
+                    }
+
+                    if (_sortingPausedByTray)
+                    {
+                        _sortingPausedByTray = false;
+                        runningProcessesView.IsLiveSorting = !_sortingPausedByCtrl;
+                        if (!_sortingPausedByCtrl)
+                        {
+                            RunningProcesses.SuppressNotifications(false);
+                            runningProcessesView.Refresh();
+                        }
+                    }
+
                     foreach (ProcessListEntryViewModel pEntry in RunningProcesses)
                     {
                         pEntry.UpdateCpuUsage();
@@ -156,8 +183,7 @@ namespace CPUSetSetter.UI.Tabs.Processes
                     // Only the selected process has its per-core usage sampled, as it is the only one shown in the row details
                     SelectedProcess?.UpdatePerCoreUsage();
                 });
-                int delayTime = windowIsVisible ? 1000 : 5000; // Poll the CPU usage less often when not visible
-                await Task.Delay(delayTime);
+                await Task.Delay(1000);
             }
         }
 
