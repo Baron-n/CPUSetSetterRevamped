@@ -15,7 +15,7 @@ namespace CPUSetSetter.Util
 
         /// <summary>
         /// Clear the mask of any running process, but don't save this to the config.
-        /// Used when closing CPU Set Setter
+        /// Used when closing CPU Set Setter Revamped
         /// </summary>
         public static void ClearAllProcessMasksNoSave()
         {

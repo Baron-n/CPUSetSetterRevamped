@@ -48,7 +48,7 @@ namespace CPUSetSetter
             }
             catch (UnsupportedCpu ex)
             {
-                MessageBox.Show($"This system's CPU is unfortunately not supported: {ex.Message}", "CPU Set Setter", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"This system's CPU is unfortunately not supported: {ex.Message}", "CPU Set Setter Revamped", MessageBoxButton.OK, MessageBoxImage.Error);
                 ExitApp();
                 return;
             }
@@ -59,7 +59,7 @@ namespace CPUSetSetter
             singleInstanceMutex = new(true, mutexName, out bool isOwned);
             if (!isOwned)
             {
-                MessageBox.Show("Failed to open: App is already running", "CPU Set Setter", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Failed to open: App is already running", "CPU Set Setter Revamped", MessageBoxButton.OK, MessageBoxImage.Error);
                 ExitApp();
                 return;
             }

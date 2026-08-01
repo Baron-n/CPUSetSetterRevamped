@@ -3,7 +3,7 @@
 ## Revamped
 
 ### CPU Set fixes
-- **CPU Sets now apply to existing threads.** The process default CPU Set only constrains threads created *after* it is set, so threads already running never moved. CPU Set Setter now pins every existing thread of the process to the CPU Set as well (`SetThreadSelectedCpuSets`), and releases them when the mask is cleared.
+- **CPU Sets now apply to existing threads.** The process default CPU Set only constrains threads created *after* it is set, so threads already running never moved. CPU Set Setter Revamped now pins every existing thread of the process to the CPU Set as well (`SetThreadSelectedCpuSets`), and releases them when the mask is cleared.
 - **Affinity and CPU Sets no longer conflict.** When a mask is applied, the other restriction type is always cleared first. Previously a leftover Affinity could produce an empty intersection with a CPU Set, leaving threads stuck on the Affinity's cores.
 - **"Clear mask on close" works.** Clearing now removes both restriction types instead of failing with a NotImplementedException.
 - **Per-core usage display corrected.** Windows reports a stale "ideal processor" for threads confined to a CPU Set (it keeps claiming the E-cores while the thread actually runs on a P-core). The per-core usage readout now redistributes such misplaced usage into the cores of the active CPU Set, so the heatmap matches reality.

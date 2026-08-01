@@ -58,7 +58,7 @@ namespace CPUSetSetter.Util
 
         public static void OpenLatestReleasePage()
         {
-            Process.Start(new ProcessStartInfo { FileName = "https://github.com/SimonvBez/CPUSetSetter/releases/latest", UseShellExecute = true });
+            Process.Start(new ProcessStartInfo { FileName = "https://github.com/Baron-n/CPUSetSetterRevamped/releases/latest", UseShellExecute = true });
         }
 
         partial void OnNewVersionAvailableChanged(bool value)
@@ -66,18 +66,18 @@ namespace CPUSetSetter.Util
             if (!value)
                 return;
 
-            WindowLogger.Write("A new version of CPU Set Setter is available on GitHub!");
+            WindowLogger.Write("A new version of CPU Set Setter Revamped is available on GitHub!");
 
             if (AppConfig.Instance.ShowUpdatePopup)
             {
                 App.Current.Dispatcher.InvokeAsync(() =>
                 {
                     MessageBoxResult result = MessageBox.Show(
-                        "A new version of CPU Set Setter is available!\n" +
+                        "A new version of CPU Set Setter Revamped is available!\n" +
                         "Would you like to open the Release page now?\n" +
                         "(Sorry, self-updaters are hard)\n\n" +
                         "(This popup can be disabled in the Settings tab)",
-                        "New CPU Set Setter update available",
+                        "New CPU Set Setter Revamped update available",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Information);
 
@@ -139,9 +139,9 @@ namespace CPUSetSetter.Util
 
             // GitHub API requires a User-Agent header
             client.DefaultRequestHeaders.UserAgent.Add(
-                new ProductInfoHeaderValue("CPUSetSetterUpdateChecker", "1.0"));
+                new ProductInfoHeaderValue("CPUSetSetterRevampedUpdateChecker", "1.0"));
 
-            string url = "https://api.github.com/repos/SimonvBez/CPUSetSetter/releases/latest";
+            string url = "https://api.github.com/repos/Baron-n/CPUSetSetterRevamped/releases/latest";
 
             var response = await client.GetAsync(url);
             try

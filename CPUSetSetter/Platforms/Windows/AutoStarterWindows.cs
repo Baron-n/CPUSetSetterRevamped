@@ -32,7 +32,7 @@ namespace CPUSetSetter.Platforms
                 using TaskService taskService = new();
                 using TaskDefinition taskDefinition = taskService.NewTask();
                 string currentUser = WindowsIdentity.GetCurrent().Name;
-                taskDefinition.RegistrationInfo.Description = "Start CPU Set Setter at startup";
+                    taskDefinition.RegistrationInfo.Description = "Start CPU Set Setter Revamped at startup";
                 taskDefinition.Principal.UserId = currentUser;
                 taskDefinition.Principal.RunLevel = TaskRunLevel.Highest;
                 taskDefinition.Principal.LogonType = TaskLogonType.InteractiveToken;

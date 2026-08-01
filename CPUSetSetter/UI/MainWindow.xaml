@@ -8,7 +8,7 @@
         xmlns:rules="clr-namespace:CPUSetSetter.UI.Tabs.Rules"
         xmlns:settings="clr-namespace:CPUSetSetter.UI.Tabs.Settings"
         mc:Ignorable="d"
-        Title="CPU Set Setter"
+        Title="CPU Set Setter Revamped"
         Height="574"
         MinHeight="574"
         Width="1020"

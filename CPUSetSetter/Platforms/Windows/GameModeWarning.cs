@@ -8,7 +8,7 @@ using System.Windows;
 namespace CPUSetSetter.Platforms
 {
     /// <summary>
-    /// Windows Game Mode is abysmal to gaming performance when combined with CPU Set Setter.
+    /// Windows Game Mode is abysmal to gaming performance when combined with CPU Set Setter Revamped.
     /// Warn the user, and encourage them to turn it off, or experiment with it on.
     /// </summary>
     public static class WindowsGameModeWarning
@@ -19,7 +19,7 @@ namespace CPUSetSetter.Platforms
                 return;
 
             WindowLogger.Write("WARNING: Windows Game Mode is enabled. This might have a severe negative impact on gaming performance/stability " +
-                "when also using CPU Set Setter on games.");
+                "when also using CPU Set Setter Revamped on games.");
 
             if (AppConfig.Instance.ShowGameModePopup)
             {
@@ -27,11 +27,11 @@ namespace CPUSetSetter.Platforms
                 {
                     MessageBoxResult result = MessageBox.Show(
                         "Windows Game Mode is currently enabled.\n" +
-                        "On AMD CPUs, Game Mode is known to conflict with CPU Set Setter, leading to lower FPS and game crashes.\n" +
+                        "On AMD CPUs, Game Mode is known to conflict with CPU Set Setter Revamped, leading to lower FPS and game crashes.\n" +
                         "I am not sure if Intel CPUs are affected too. So if you have one, please share your findings with me on GitHub!\n\n" +
                         "Would you like to open the Game Mode Settings page?\n\n" +
                         "(This popup can be disabled in the Settings tab)",
-                        "CPU Set Setter: Windows Game Mode warning",
+                        "CPU Set Setter Revamped: Windows Game Mode warning",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Warning);
 

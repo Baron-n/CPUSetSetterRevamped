@@ -1,4 +1,4 @@
-﻿using CPUSetSetter.Config.Models;
+using CPUSetSetter.Config.Models;
 using CPUSetSetter.UI.Tabs.Processes;
 using Microsoft.Win32.SafeHandles;
 using System.ComponentModel;
@@ -326,7 +326,7 @@ namespace CPUSetSetter.Platforms.Windows
             }
 
             error = Marshal.GetLastWin32Error();
-            extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter as Admin" : " Likely due to anti-cheat";
+            extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter Revamped as Admin" : " Likely due to anti-cheat";
             WindowLogger.Write($"ERROR: Could not apply CPU Set to '{_executableName}': {new Win32Exception(error).Message}{extraHelpString}");
             return false;
         }
@@ -465,7 +465,7 @@ namespace CPUSetSetter.Platforms.Windows
                 if (_setLimitedInfoHandle.IsInvalid)
                 {
                     int error = Marshal.GetLastWin32Error();
-                    string extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter as Admin" : "";
+                    string extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter Revamped as Admin" : "";
                     WindowLogger.Write($"ERROR: Could not open process '{_executableName}': {new Win32Exception(error).Message}{extraHelpString}");
                 }
             }
@@ -518,7 +518,7 @@ namespace CPUSetSetter.Platforms.Windows
             }
 
             error = Marshal.GetLastWin32Error();
-            extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter as Admin" : " Likely due to anti-cheat";
+            extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter Revamped as Admin" : " Likely due to anti-cheat";
             WindowLogger.Write($"ERROR: Could not apply Affinity to '{_executableName}': {new Win32Exception(error).Message}{extraHelpString}");
             return false;
         }
@@ -559,7 +559,7 @@ namespace CPUSetSetter.Platforms.Windows
                 if (_setInfoHandle.IsInvalid)
                 {
                     int error = Marshal.GetLastWin32Error();
-                    string extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter as Admin" : "";
+                    string extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter Revamped as Admin" : "";
                     WindowLogger.Write($"ERROR: Could not open process '{_executableName}': {new Win32Exception(error).Message}{extraHelpString}");
                 }
             }

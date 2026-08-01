@@ -45,7 +45,7 @@
     </BulletDecorator>
 
     <BulletDecorator Margin="0,0,0,4"
-                     ToolTip="Clear the Masks on any running process when closing CPU Set Setter through the tray icon">
+                     ToolTip="Clear the Masks on any running process when closing CPU Set Setter Revamped through the tray icon">
         <BulletDecorator.Bullet>
             <CheckBox IsChecked="{Binding ClearMasksOnClose, Source={x:Static config:AppConfig.Instance}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
         </BulletDecorator.Bullet>

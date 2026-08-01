@@ -21,14 +21,14 @@ Make your games and apps run on the right CPU cores &mdash; for smoother perform
 See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 # What it does
-Windows tries its best to schedule tasks automatically, but it may often not be optimal. CPU Set Setter gives you control: you decide which cores your games and apps can use. This tool brings quick and easy access to **CPU Sets** &mdash; almost the same as Affinity, but better &mdash; for free.
+Windows tries its best to schedule tasks automatically, but it may often not be optimal. CPU Set Setter Revamped gives you control: you decide which cores your games and apps can use. This tool brings quick and easy access to **CPU Sets** &mdash; almost the same as Affinity, but better &mdash; for free.
 
 # Common use cases / why you'd use this
 
 ## CCD locking; it's like parking, but better! (AMD Ryzen 9)
 On dual-CCD CPUs, games can see big performance improvements when they are locked to the cores on a single CCD, especially on Ryzen 9 X3D CPUs. AMD and Windows usually accomplish this by **turning off** the other CCD (called parking), but this means background processes will now also be forced onto the same CCD as the game, leading to lower and less consistent framerates.
 
-Ryzen 9 CPUs will see the largest benefit with CPU Set Setter! Especially when gaming and multitasking (streaming/rendering/etc) simutaniously.
+Ryzen 9 CPUs will see the largest benefit with CPU Set Setter Revamped! Especially when gaming and multitasking (streaming/rendering/etc) simutaniously.
 
 ## P-core locking (Intel 12th gen and up)
 Windows does its best to schedule processes automatically, but manual control over which cores a game and background processes can use will improve performance in some scenarios.
@@ -41,10 +41,10 @@ This can be done in combination with the uses cases above.
 For 5800X3D, 7800X3D and 9800X3D CPUs, this is probably the most/only useful tweak you can use.
 
 # Experimentation is key
-To quickly find out which core configuration works best for a certain game, CPU Set Setter provides Hotkey support to change/clear a program's Core Mask on the fly, so you can experiment quickly without having to even tab-out of your game.
+To quickly find out which core configuration works best for a certain game, CPU Set Setter Revamped provides Hotkey support to change/clear a program's Core Mask on the fly, so you can experiment quickly without having to even tab-out of your game.
 
 # Setup/Installation (IMPORTANT, FOLLOW THIS)
-To most optimally use CPU Set Setter, you may have to first follow some prerequisites depending on your CPU. See:
+To most optimally use CPU Set Setter Revamped, you may have to first follow some prerequisites depending on your CPU. See:
 <br>
 [AMD CPU setup](docs/setup/AMD.md)
 <br>

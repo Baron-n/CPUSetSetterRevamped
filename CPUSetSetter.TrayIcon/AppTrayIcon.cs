@@ -20,7 +20,7 @@ namespace CPUSetSetter.TrayIcon
                 Icon = new Icon(iconStream),
                 Visible = true,
                 ContextMenuStrip = trayMenu,
-                Text = "CPU Set Setter"
+                Text = "CPU Set Setter Revamped"
             };
 
             // Show the app when clicking the tray icon
