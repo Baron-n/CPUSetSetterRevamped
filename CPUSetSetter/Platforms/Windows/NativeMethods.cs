@@ -56,12 +56,40 @@ namespace CPUSetSetter.Platforms
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool GetProcessTimes(SafeProcessHandle hProcess, out FILETIME lpCreationTime, out FILETIME lpExitTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
 
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool GetThreadTimes(SafeProcessHandle hThread, out FILETIME lpCreationTime, out FILETIME lpExitTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        public static partial IntPtr OpenThread(ThreadAccessFlags dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, uint dwThreadId);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        public static partial SafeFileHandle CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool Thread32First(SafeFileHandle hSnapshot, ref THREADENTRY32 lpte);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool Thread32Next(SafeFileHandle hSnapshot, ref THREADENTRY32 lpte);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool GetThreadIdealProcessorEx(SafeProcessHandle hThread, out PROCESSOR_NUMBER lpIdealProcessor);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetThreadSelectedCpuSets(SafeProcessHandle hThread, uint[]? CpuSetIds, uint CpuSetIdCount);
+
         [LibraryImport("user32.dll")]
         public static partial short GetAsyncKeyState(int vKey);
 
         [LibraryImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP RelationshipType, IntPtr Buffer, ref uint ReturnedLength);
+
+        public const uint TH32CS_SNAPTHREAD = 0x00000004;
     }
 
     [Flags]
@@ -70,6 +98,33 @@ namespace CPUSetSetter.Platforms
         PROCESS_SET_INFORMATION = 0x00000200,
         PROCESS_QUERY_LIMITED_INFORMATION = 0x00001000,
         PROCESS_SET_LIMITED_INFORMATION = 0x00002000
+    }
+
+    [Flags]
+    public enum ThreadAccessFlags : uint
+    {
+        THREAD_QUERY_LIMITED_INFORMATION = 0x0800,
+        THREAD_SET_LIMITED_INFORMATION = 0x0400,
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PROCESSOR_NUMBER
+    {
+        public ushort Group;
+        public byte Number;
+        public byte Reserved;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct THREADENTRY32
+    {
+        public uint dwSize;
+        public uint cntUsage;
+        public uint th32ThreadID;
+        public uint th32OwnerProcessID;
+        public int tpBasePri;
+        public int tpDeltaPri;
+        public uint dwFlags;
     }
 
     [StructLayout(LayoutKind.Sequential)]

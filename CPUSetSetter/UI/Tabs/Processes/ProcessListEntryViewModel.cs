@@ -2,6 +2,11 @@
 using CPUSetSetter.Config.Models;
 using CPUSetSetter.Util;
 using CPUSetSetter.Platforms;
+using CPUSetSetter.UI.Tabs.Processes.CoreUsage;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows.Data;
+using CoreUsageModel = CPUSetSetter.UI.Tabs.Processes.CoreUsage.CoreUsage;
 
 
 namespace CPUSetSetter.UI.Tabs.Processes
@@ -12,12 +17,23 @@ namespace CPUSetSetter.UI.Tabs.Processes
     public partial class ProcessListEntryViewModel : ObservableObject, IDisposable
     {
         private readonly IProcessHandler _processHandler;
+        private readonly ListCollectionView _perCoreUsagesView;
         private LogicalProcessorMask _lastAppliedMask = LogicalProcessorMask.NoMask;
 
         public uint Pid { get; }
         public string Name { get; }
         public string ImagePath { get; }
         public bool AutoReapply { get; set; }
+
+        /// <summary>
+        /// The CPU usage attributed to each logical processor of this process. Only refreshed for the selected row
+        /// </summary>
+        public ObservableCollection<CoreUsageModel> PerCoreUsages { get; } = new(CpuInfo.LogicalProcessorNames.Select(cpuName => new CoreUsageModel(cpuName)));
+
+        /// <summary>
+        /// A filtered view of <see cref="PerCoreUsages"/> that only shows the logical processors actually being used
+        /// </summary>
+        public ICollectionView PerCoreUsagesView => _perCoreUsagesView;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(AverageCpuPercentageStr))]
@@ -29,7 +45,28 @@ namespace CPUSetSetter.UI.Tabs.Processes
         [ObservableProperty]
         private bool _previousApplyFailed = false;
 
+        /// <summary>
+        /// The restriction actually read back from the OS (CPU Set IDs or Affinity), for verification. Empty when unavailable
+        /// </summary>
+        [ObservableProperty]
+        private string _activeRestrictionInfo = "";
+
         public string AverageCpuPercentageStr => AverageCpuUsage == -1 ? "" : $"{AverageCpuUsage * 100:F1}%";
+
+        /// <summary>
+        /// The 3 most used logical processors of this process, for a quick overview
+        /// </summary>
+        public string BusiestCoresStr
+        {
+            get
+            {
+                IEnumerable<CoreUsageModel> busiest = PerCoreUsages
+                    .Where(c => c.Utility > 0.01)
+                    .OrderByDescending(c => c.Utility)
+                    .Take(3);
+                return string.Join("  ·  ", busiest.Select(c => $"{c.Name} {c.Utility * 100:F0}%"));
+            }
+        }
 
         public ProcessListEntryViewModel(ProcessInfo pInfo)
         {
@@ -37,6 +74,9 @@ namespace CPUSetSetter.UI.Tabs.Processes
             Name = pInfo.Name;
             ImagePath = pInfo.ImagePath;
             _processHandler = pInfo.ProcessHandler;
+
+            _perCoreUsagesView = (ListCollectionView)CollectionViewSource.GetDefaultView(PerCoreUsages);
+            _perCoreUsagesView.Filter = item => ((CoreUsageModel)item).Utility > 0.01;
 
             ProgramRule? programRule = RuleHelpers.GetProgramRuleOrNull(pInfo.ImagePath);
             programRule?.AddRunningProcess(this);
@@ -52,6 +92,30 @@ namespace CPUSetSetter.UI.Tabs.Processes
         public void UpdateCpuUsage()
         {
             AverageCpuUsage = _processHandler.GetAverageCpuUsage();
+        }
+
+        /// <summary>
+        /// Refresh the per-core CPU usage bars. Call from the UI thread; returns quickly if the process is not accessible
+        /// </summary>
+        public void UpdatePerCoreUsage()
+        {
+            double[]? perCoreUsages = _processHandler.GetPerCoreCpuUsage();
+            ActiveRestrictionInfo = _processHandler.GetCurrentRestrictionInfo() ?? "";
+
+            if (perCoreUsages is null)
+                return;
+
+            for (int i = 0; i < PerCoreUsages.Count; ++i)
+            {
+                PerCoreUsages[i].Utility = perCoreUsages[i];
+            }
+            OnPropertyChanged(nameof(BusiestCoresStr));
+
+            // Re-apply the filter so only the logical processors that are actually being used stay visible
+            if (_perCoreUsagesView.Dispatcher.CheckAccess())
+                _perCoreUsagesView.Refresh();
+            else
+                _perCoreUsagesView.Dispatcher.Invoke(() => _perCoreUsagesView.Refresh());
         }
 
         public void ReapplyMask()

@@ -12,6 +12,9 @@ namespace CPUSetSetter.Platforms.Windows
         private readonly static Dictionary<int, uint> _logicalProcessorToSetId;
         private readonly static Dictionary<uint, int> _setIdToLogicalProcessor;
         private readonly Queue<CpuTimeTimestamp> _cpuTimeMovingAverageBuffer = new();
+        private readonly Dictionary<uint, ThreadCpuSample> _threadCpuSamples = [];
+        private DateTime _lastPerCoreSampleTime;
+        private bool _hasPreviousPerCoreSample;
 
         private readonly string _executableName;
         private readonly uint _pid;
@@ -19,6 +22,12 @@ namespace CPUSetSetter.Platforms.Windows
         private SafeProcessHandle? _setLimitedInfoHandle;
         private SafeProcessHandle? _setInfoHandle;
         private MaskApplyType _previousMaskType = MaskApplyType.NoMask;
+
+        /// <summary>
+        /// Logical processors of the currently applied CPU Set, used to correct the per-core display:
+        /// a CPU Set confined thread's reported ideal processor is not updated
+        /// </summary>
+        private bool[]? _activeCpuSetMask;
 
         static ProcessHandlerWindows()
         {
@@ -75,6 +84,121 @@ namespace CPUSetSetter.Platforms.Windows
                 return (double)deltaCpuTime.Ticks / deltaTime.Ticks / CpuInfo.LogicalProcessorCount;
         }
 
+        /// <summary>
+        /// Approximate the process' CPU usage per logical processor by sampling each thread's current
+        /// processor and CPU time, attributing a thread's time since the previous sample to its current processor
+        /// </summary>
+        public double[]? GetPerCoreCpuUsage()
+        {
+            if (_queryLimitedInfoHandle.IsInvalid)
+            {
+                return null;
+            }
+
+            DateTime now = DateTime.Now;
+            double[] result = new double[CpuInfo.LogicalProcessorCount];
+
+            try
+            {
+                using SafeFileHandle snapshot = NativeMethods.CreateToolhelp32Snapshot(NativeMethods.TH32CS_SNAPTHREAD, _pid);
+                if (snapshot.IsInvalid)
+                {
+                    return null;
+                }
+
+                THREADENTRY32 threadEntry = new() { dwSize = (uint)Marshal.SizeOf<THREADENTRY32>() };
+                if (!NativeMethods.Thread32First(snapshot, ref threadEntry))
+                {
+                    return null;
+                }
+
+                Dictionary<uint, ThreadCpuSample> currentSamples = [];
+                do
+                {
+                    if (threadEntry.th32OwnerProcessID != _pid)
+                        continue;
+
+                    IntPtr rawThreadHandle = NativeMethods.OpenThread(ThreadAccessFlags.THREAD_QUERY_LIMITED_INFORMATION, false, threadEntry.th32ThreadID);
+                    if (rawThreadHandle == IntPtr.Zero)
+                        continue;
+
+                    using SafeProcessHandle threadHandle = new(rawThreadHandle, true);
+
+                    // Get the processor this thread prefers to run on, which for busy threads tracks the processor it is currently running on
+                    if (!NativeMethods.GetThreadIdealProcessorEx(threadHandle, out PROCESSOR_NUMBER processorNumber))
+                        continue;
+
+                    if (!NativeMethods.GetThreadTimes(threadHandle, out FILETIME _, out FILETIME _, out FILETIME kernelTime, out FILETIME userTime))
+                        continue;
+
+                    int processorIndex = processorNumber.Group != 0 || processorNumber.Number >= CpuInfo.LogicalProcessorCount ? 0 : processorNumber.Number;
+
+                    currentSamples[threadEntry.th32ThreadID] = new()
+                    {
+                        CpuTicks = (long)(kernelTime.ULong + userTime.ULong),
+                        ProcessorIndex = processorIndex,
+                    };
+                }
+                while (NativeMethods.Thread32Next(snapshot, ref threadEntry));
+
+                // Attribute the CPU time of each thread since the previous sample to the processor it is currently on
+                if (_hasPreviousPerCoreSample)
+                {
+                    double elapsedSeconds = (now - _lastPerCoreSampleTime).TotalSeconds;
+                    if (elapsedSeconds > 0)
+                    {
+                        double misplacedUsage = 0;
+                        foreach ((uint threadId, ThreadCpuSample currentSample) in currentSamples)
+                        {
+                            if (!_threadCpuSamples.TryGetValue(threadId, out ThreadCpuSample? previousSample))
+                                continue;
+
+                            double coreFraction = (currentSample.CpuTicks - previousSample.CpuTicks) / (double)TimeSpan.TicksPerSecond / elapsedSeconds;
+                            if (coreFraction <= 0)
+                                continue;
+
+                            // A thread confined to a CPU Set may still report a stale ideal processor outside the
+                            // CPU Set; attribute such usage to the CPU Set's cores instead
+                            if (_activeCpuSetMask is not null && !_activeCpuSetMask[currentSample.ProcessorIndex])
+                                misplacedUsage += coreFraction;
+                            else
+                                result[currentSample.ProcessorIndex] = Math.Clamp(result[currentSample.ProcessorIndex] + coreFraction, 0, 1);
+                        }
+
+                        if (misplacedUsage > 0 && _activeCpuSetMask is not null)
+                        {
+                            int cpuSetCount = 0;
+                            for (int i = 0; i < _activeCpuSetMask.Length; ++i)
+                                if (_activeCpuSetMask[i])
+                                    ++cpuSetCount;
+
+                            if (cpuSetCount > 0)
+                            {
+                                double perCpuSetCore = misplacedUsage / cpuSetCount;
+                                for (int i = 0; i < _activeCpuSetMask.Length; ++i)
+                                    if (_activeCpuSetMask[i])
+                                        result[i] = Math.Clamp(result[i] + perCpuSetCore, 0, 1);
+                            }
+                        }
+                    }
+                }
+
+                _threadCpuSamples.Clear();
+                foreach ((uint threadId, ThreadCpuSample sample) in currentSamples)
+                {
+                    _threadCpuSamples[threadId] = sample;
+                }
+                _hasPreviousPerCoreSample = true;
+                _lastPerCoreSampleTime = now;
+                return result;
+            }
+            catch (Exception)
+            {
+                // Threads may disappear or refuse access in between calls (e.g. anti-cheat)
+                return null;
+            }
+        }
+
         public bool ApplyMask(LogicalProcessorMask mask)
         {
             bool result;
@@ -82,24 +206,22 @@ namespace CPUSetSetter.Platforms.Windows
             switch (mask.MaskType)
             {
                 case MaskApplyType.NoMask:
-                    // Clear the previous mask
-                    if (_previousMaskType == MaskApplyType.CPUSet)
-                        result = ApplyCpuSet(mask);
-                    else if (_previousMaskType == MaskApplyType.Affinity)
-                        result = ApplyAffinity(mask);
-                    else
-                        throw new NotImplementedException();
+                    // Clear both restriction types so the process is fully unrestricted, regardless of the tracked state
+                    bool affinityCleared = ApplyAffinity(mask);
+                    bool cpuSetCleared = ApplyCpuSet(mask);
+                    result = affinityCleared || cpuSetCleared;
                     break;
 
                 case MaskApplyType.CPUSet:
-                    if (_previousMaskType == MaskApplyType.Affinity)
-                        ApplyAffinity(LogicalProcessorMask.NoMask); // Clear the previous Affinity if the MaskType has changed
+                    // Always clear the Affinity first: if a stale Affinity overlaps the CPU Set badly (e.g. empty intersection),
+                    // the threads would keep running on the Affinity's cores instead of the CPU Set's
+                    ApplyAffinity(LogicalProcessorMask.NoMask);
                     result = ApplyCpuSet(mask);
                     break;
 
                 case MaskApplyType.Affinity:
-                    if (_previousMaskType == MaskApplyType.CPUSet)
-                        ApplyCpuSet(LogicalProcessorMask.NoMask); // Clear the previous CPU Set if the MaskType has changed
+                    // Always clear the CPU Set first: a stale CPU Set would otherwise keep restricting the threads
+                    ApplyCpuSet(LogicalProcessorMask.NoMask);
                     result = ApplyAffinity(mask);
                     break;
 
@@ -164,6 +286,8 @@ namespace CPUSetSetter.Platforms.Windows
                 success = NativeMethods.SetProcessDefaultCpuSets(setLimitedInfoHandle, null, 0);
                 if (success)
                 {
+                    _activeCpuSetMask = null;
+                    SetCpuSetsForAllThreads(null); // Release the per-thread CPU Set assignments too
                     WindowLogger.Write($"Cleared CPU Set of '{_executableName}'");
                     return true;
                 }
@@ -191,6 +315,12 @@ namespace CPUSetSetter.Platforms.Windows
             success = NativeMethods.SetProcessDefaultCpuSets(setLimitedInfoHandle, cpuSetIdsArray, (uint)cpuSetIdsArray.Length);
             if (success)
             {
+                // The process default CPU Set only applies to threads created after it is set, so pin existing threads too
+                if (cpuSetIdsArray.Length > 0)
+                {
+                    _activeCpuSetMask = mask.BoolMask.ToArray();
+                    SetCpuSetsForAllThreads(cpuSetIdsArray);
+                }
                 WindowLogger.Write($"Applied CPU Set '{mask.Name}' to '{_executableName}'");
                 return true;
             }
@@ -199,6 +329,35 @@ namespace CPUSetSetter.Platforms.Windows
             extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter as Admin" : " Likely due to anti-cheat";
             WindowLogger.Write($"ERROR: Could not apply CPU Set to '{_executableName}': {new Win32Exception(error).Message}{extraHelpString}");
             return false;
+        }
+
+        /// <summary>
+        /// Assign every thread of this process to the given CPU Sets, or release them when <paramref name="cpuSetIds"/> is null.
+        /// The process default CPU Set only applies to threads created after it is set
+        /// </summary>
+        private void SetCpuSetsForAllThreads(uint[]? cpuSetIds)
+        {
+            using SafeFileHandle snapshot = NativeMethods.CreateToolhelp32Snapshot(NativeMethods.TH32CS_SNAPTHREAD, _pid);
+            if (snapshot.IsInvalid)
+                return;
+
+            THREADENTRY32 threadEntry = new() { dwSize = (uint)Marshal.SizeOf<THREADENTRY32>() };
+            if (!NativeMethods.Thread32First(snapshot, ref threadEntry))
+                return;
+
+            do
+            {
+                if (threadEntry.th32OwnerProcessID != _pid)
+                    continue;
+
+                IntPtr rawThreadHandle = NativeMethods.OpenThread(ThreadAccessFlags.THREAD_SET_LIMITED_INFORMATION, false, threadEntry.th32ThreadID);
+                if (rawThreadHandle == IntPtr.Zero)
+                    continue;
+
+                using SafeProcessHandle threadHandle = new(rawThreadHandle, true);
+                NativeMethods.SetThreadSelectedCpuSets(threadHandle, cpuSetIds, cpuSetIds is null ? 0 : (uint)cpuSetIds.Length);
+            }
+            while (NativeMethods.Thread32Next(snapshot, ref threadEntry));
         }
 
         private bool[] GetCpuSetMask()
@@ -229,6 +388,73 @@ namespace CPUSetSetter.Platforms.Windows
                 result[logicalProcessor] = true;
             }
             return result;
+        }
+
+        public string? GetCurrentRestrictionInfo()
+        {
+            try
+            {
+                // CPU Sets take precedence if any are applied, and are read back from the OS
+                uint requiredIdCount = 0;
+                bool hasCpuSets = !NativeMethods.GetProcessDefaultCpuSets(_queryLimitedInfoHandle, null, 0, ref requiredIdCount) && requiredIdCount > 0;
+                if (hasCpuSets)
+                {
+                    uint[] cpuSetIds = new uint[requiredIdCount];
+                    if (NativeMethods.GetProcessDefaultCpuSets(_queryLimitedInfoHandle, cpuSetIds, (uint)cpuSetIds.Length, ref requiredIdCount))
+                    {
+                        int[] cores = cpuSetIds
+                            .Where(id => _setIdToLogicalProcessor.TryGetValue(id, out _))
+                            .Select(id => _setIdToLogicalProcessor[id])
+                            .OrderBy(core => core)
+                            .ToArray();
+                        return $"CPU Set: IDs {string.Join(",", cpuSetIds)} (cores {FormatCoreRanges(cores)})";
+                    }
+                }
+
+                // No CPU Set applied, fall back to reporting the Affinity mask
+                UIntPtr processMask = 0;
+                UIntPtr systemMask = 0;
+                if (NativeMethods.GetProcessAffinityMask(_queryLimitedInfoHandle, ref processMask, ref systemMask))
+                {
+                    int[] cores = Enumerable.Range(0, CpuInfo.LogicalProcessorCount)
+                        .Where(i => (processMask & ((UIntPtr)1 << i)) != 0)
+                        .ToArray();
+                    if (cores.Length == CpuInfo.LogicalProcessorCount)
+                        return "Affinity: all cores";
+                    return $"Affinity: cores {FormatCoreRanges(cores)}";
+                }
+            }
+            catch (Exception)
+            {
+                // Process may have exited or refuse access
+                return null;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Format a set of logical processor indexes as compact ranges, e.g. {0,1,2,3,6,7} -> "0-3,6-7"
+        /// </summary>
+        private static string FormatCoreRanges(int[] cores)
+        {
+            if (cores.Length == 0)
+                return "none";
+
+            List<string> parts = [];
+            int start = cores[0];
+            int prev = cores[0];
+            for (int i = 1; i < cores.Length; ++i)
+            {
+                if (cores[i] == prev + 1)
+                {
+                    prev = cores[i];
+                    continue;
+                }
+                parts.Add(start == prev ? $"{start}" : $"{start}-{prev}");
+                start = prev = cores[i];
+            }
+            parts.Add(start == prev ? $"{start}" : $"{start}-{prev}");
+            return string.Join(",", parts);
         }
 
         private bool AquireSetLimitedInfoHandle(out SafeProcessHandle setLimitedInfoHandle)
@@ -266,6 +492,7 @@ namespace CPUSetSetter.Platforms.Windows
                 success = NativeMethods.SetProcessAffinityMask(setInfoHandle, allMask);
                 if (success)
                 {
+                    _activeCpuSetMask = null;
                     WindowLogger.Write($"Cleared Affinity of '{_executableName}'");
                     return true;
                 }
@@ -285,6 +512,7 @@ namespace CPUSetSetter.Platforms.Windows
             success = NativeMethods.SetProcessAffinityMask(setInfoHandle, bitMask);
             if (success)
             {
+                _activeCpuSetMask = null;
                 WindowLogger.Write($"Applied Affinity '{mask.Name}' to '{_executableName}'");
                 return true;
             }
@@ -392,12 +620,19 @@ namespace CPUSetSetter.Platforms.Windows
             _setLimitedInfoHandle?.Dispose();
             _setInfoHandle?.Dispose();
             _cpuTimeMovingAverageBuffer.Clear();
+            _threadCpuSamples.Clear();
         }
 
         private class CpuTimeTimestamp
         {
             public DateTime Timestamp { get; init; }
             public TimeSpan TotalCpuTime { get; init; }
+        }
+
+        private class ThreadCpuSample
+        {
+            public long CpuTicks { get; init; }
+            public int ProcessorIndex { get; init; }
         }
     }
 }

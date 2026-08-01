@@ -22,6 +22,9 @@ namespace CPUSetSetter.UI.Tabs.Processes
         [ObservableProperty]
         private string _processNameFilter = string.Empty;
 
+        [ObservableProperty]
+        private ProcessListEntryViewModel? _selectedProcess;
+
         public ProcessesTabViewModel(Dispatcher dispatcher)
         {
             _dispatcher = dispatcher;
@@ -93,6 +96,13 @@ namespace CPUSetSetter.UI.Tabs.Processes
             runningProcessesView.Refresh();
         }
 
+        partial void OnSelectedProcessChanged(ProcessListEntryViewModel? oldValue, ProcessListEntryViewModel? newValue)
+        {
+            // Refresh the per-core usage of the newly selected process immediately, off the UI thread
+            if (newValue is not null)
+                _ = Task.Run(newValue.UpdatePerCoreUsage);
+        }
+
         private void OnNewProcess(ProcessInfo pInfo)
         {
             _dispatcher.Invoke(() =>
@@ -143,6 +153,8 @@ namespace CPUSetSetter.UI.Tabs.Processes
                     {
                         pEntry.UpdateCpuUsage();
                     }
+                    // Only the selected process has its per-core usage sampled, as it is the only one shown in the row details
+                    SelectedProcess?.UpdatePerCoreUsage();
                 });
                 int delayTime = windowIsVisible ? 1000 : 5000; // Poll the CPU usage less often when not visible
                 await Task.Delay(delayTime);

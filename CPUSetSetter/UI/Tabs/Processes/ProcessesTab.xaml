@@ -17,6 +17,10 @@
         <RowDefinition Height="142" MinHeight="80" MaxHeight="350"/>
     </Grid.RowDefinitions>
 
+    <Grid.Resources>
+        <coreuse:UtilityToBrushConverter x:Key="UtilityToBrushConverter"/>
+    </Grid.Resources>
+
     <!--Search Bar-->
     <Grid Grid.Row="0"
           Margin="3,5,0,0">
@@ -47,7 +51,103 @@
               CanUserDeleteRows="False"
               CanUserAddRows="False"
               CanUserResizeRows="False"
-              ui:DataGridExtensions.SortDesc="True">
+              ui:DataGridExtensions.SortDesc="True"
+              SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
+              PreviewMouseLeftButtonDown="ProcessesGrid_PreviewMouseLeftButtonDown"
+              PreviewMouseLeftButtonUp="ProcessesGrid_PreviewMouseLeftButtonUp"
+              RowDetailsVisibilityMode="VisibleWhenSelected">
+
+        <DataGrid.RowDetailsTemplate>
+            <DataTemplate>
+                <Border Margin="8,2,8,4"
+                        Padding="6,4"
+                        BorderBrush="#808080"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        SnapsToDevicePixels="True">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="CPU usage per core"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+
+                            <TextBlock Grid.Column="1"
+                                       Margin="10,0"
+                                       Text="{Binding BusiestCoresStr}"
+                                       FontSize="11"
+                                       Foreground="#808080"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"/>
+
+                            <Button Grid.Column="2"
+                                    Content="Hide"
+                                    Padding="6,1"
+                                    FontSize="11"
+                                    VerticalAlignment="Center"
+                                    Click="HideDetails_Click"/>
+                        </Grid>
+
+                        <TextBlock Text="{Binding ActiveRestrictionInfo}"
+                                   Margin="0,2,0,0"
+                                   FontSize="10.5"
+                                   Foreground="#80a5b0"
+                                   TextTrimming="CharacterEllipsis"/>
+
+                        <ItemsControl ItemsSource="{Binding PerCoreUsagesView}" Margin="0,4,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <!--Fixed-size heat cell: wraps to new rows when the window is narrow, so nothing overlaps-->
+                                    <Border Width="42"
+                                            Height="24"
+                                            Margin="1"
+                                            CornerRadius="3"
+                                            SnapsToDevicePixels="True"
+                                            Background="{Binding Utility, Converter={StaticResource UtilityToBrushConverter}}"
+                                            BorderBrush="#40000000"
+                                            BorderThickness="0.5"
+                                            ToolTip="{Binding TooltipStr}">
+                                        <Grid>
+                                            <TextBlock Text="{Binding UtilityStr}"
+                                                       Foreground="White"
+                                                       FontSize="10"
+                                                       FontWeight="Bold"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Effect>
+                                                    <DropShadowEffect Color="Black" Opacity="0.5" BlurRadius="1.5" ShadowDepth="0.5"/>
+                                                </TextBlock.Effect>
+                                            </TextBlock>
+                                            <Border VerticalAlignment="Bottom"
+                                                    Height="9"
+                                                    Background="#33000000"
+                                                    CornerRadius="0,0,3,3">
+                                                <TextBlock Text="{Binding Name}"
+                                                           Foreground="White"
+                                                           FontSize="6.5"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+        </DataGrid.RowDetailsTemplate>
 
         <DataGrid.CellStyle>
             <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">

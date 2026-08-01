@@ -1,4 +1,4 @@
-# CPU Set Setter
+# CPU Set Setter Revamped
 
 <p align=center>
     <img height="75" src="Images/Logo.png">
