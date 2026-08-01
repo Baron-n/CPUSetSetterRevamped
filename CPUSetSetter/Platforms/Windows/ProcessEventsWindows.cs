@@ -1,4 +1,5 @@
 ﻿using CPUSetSetter.Platforms.Windows;
+using CPUSetSetter.UI.Tabs.Processes;
 using Microsoft.Win32.SafeHandles;
 using System.Management;
 
@@ -9,6 +10,11 @@ namespace CPUSetSetter.Platforms
     {
         private bool _hasStarted = false;
 
+        private ManagementEventWatcher? _traceStartWatcher;
+        private ManagementEventWatcher? _traceStopWatcher;
+        private ManagementEventWatcher? _pollStartWatcher;
+        private ManagementEventWatcher? _pollStopWatcher;
+
         public event EventHandler<NewProcessEventArgs>? ProcessCreated;
         public event EventHandler<ExitedProcessEventArgs>? ProcessExited;
 
@@ -18,8 +24,10 @@ namespace CPUSetSetter.Platforms
                 return;
             _hasStarted = true;
 
-            StartNewProcessListener();
-            StartExitedProcessListener();
+            // Try the low-latency ETW-based listeners first, falling back to polling when they cannot be started
+            if (!TryStartTraceListeners())
+                StartPollingListeners();
+
             ListCurrentProcesses();
         }
 
@@ -29,62 +37,101 @@ namespace CPUSetSetter.Platforms
 
             foreach (ManagementBaseObject process in searcher.Get())
             {
-                AddNewProcess(process);
+                AddNewProcess(ParseName(process), ParsePid(process), "");
             }
         }
 
-        private void StartNewProcessListener()
+        /// <summary>
+        /// Subscribe to the low-latency process events via the ETW-backed Win32_ProcessStartTrace and
+        /// Win32_ProcessStopTrace classes, which fire as soon as a process starts or exits.
+        /// Returns false when the subscription fails, which happens when the app is not running elevated.
+        /// </summary>
+        private bool TryStartTraceListeners()
         {
-            string query = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process'";
-            ManagementEventWatcher watcher = new(new WqlEventQuery(query));
-
-            watcher.EventArrived += (_, e) =>
+            try
             {
-                var process = (ManagementBaseObject)e.NewEvent["TargetInstance"];
-                AddNewProcess(process);
-            };
+                _traceStartWatcher = new ManagementEventWatcher(new WqlEventQuery("SELECT * FROM Win32_ProcessStartTrace"));
+                _traceStartWatcher.EventArrived += (_, e) =>
+                {
+                    ManagementBaseObject data = (ManagementBaseObject)e.NewEvent;
+                    AddNewProcess((string)data["ProcessName"], (uint)data["ProcessID"], data["ExecutablePath"] as string ?? "");
+                };
+                _traceStartWatcher.Start();
 
-            watcher.Start();
+                _traceStopWatcher = new ManagementEventWatcher(new WqlEventQuery("SELECT * FROM Win32_ProcessStopTrace"));
+                _traceStopWatcher.EventArrived += (_, e) =>
+                {
+                    ManagementBaseObject data = (ManagementBaseObject)e.NewEvent;
+                    ProcessExited?.Invoke(this, new((uint)data["ProcessID"]));
+                };
+                _traceStopWatcher.Start();
+                return true;
+            }
+            catch (ManagementException ex)
+            {
+                // Subscribing to the ETW trace requires elevation, so fall back to polling when not running as admin
+                WindowLogger.Write($"Process event trace unavailable (running without admin?), falling back to polling: {ex.Message}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                WindowLogger.Write($"Failed to start process event trace, falling back to polling: {ex}");
+                return false;
+            }
         }
 
-        private void StartExitedProcessListener()
+        /// <summary>
+        /// Fall back to polling-based process events, which fire every ~5 seconds but work without elevation
+        /// </summary>
+        private void StartPollingListeners()
         {
-            string query = "SELECT * FROM __InstanceDeletionEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process'";
-            ManagementEventWatcher watcher = new(new WqlEventQuery(query));
-
-            watcher.EventArrived += (_, e) =>
+            string startQuery = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process'";
+            _pollStartWatcher = new ManagementEventWatcher(new WqlEventQuery(startQuery));
+            _pollStartWatcher.EventArrived += (_, e) =>
             {
-                var process = (ManagementBaseObject)e.NewEvent["TargetInstance"];
-                uint pid = (uint)process["ProcessId"];
-                ProcessExited?.Invoke(this, new(pid));
+                ManagementBaseObject process = (ManagementBaseObject)e.NewEvent["TargetInstance"];
+                AddNewProcess(ParseName(process), ParsePid(process), "");
             };
+            _pollStartWatcher.Start();
 
-            watcher.Start();
+            string stopQuery = "SELECT * FROM __InstanceDeletionEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process'";
+            _pollStopWatcher = new ManagementEventWatcher(new WqlEventQuery(stopQuery));
+            _pollStopWatcher.EventArrived += (_, e) =>
+            {
+                ManagementBaseObject process = (ManagementBaseObject)e.NewEvent["TargetInstance"];
+                ProcessExited?.Invoke(this, new(ParsePid(process)));
+            };
+            _pollStopWatcher.Start();
         }
 
-        private void AddNewProcess(ManagementBaseObject process)
+        private void AddNewProcess(string name, uint pid, string knownExecutablePath)
         {
-            ProcessInfo pInfo = ParseManagementProcess(process);
+            ProcessInfo pInfo = ParseManagementProcess(name, pid, knownExecutablePath);
             ProcessCreated?.Invoke(this, new NewProcessEventArgs(pInfo));
         }
 
-        private static ProcessInfo ParseManagementProcess(ManagementBaseObject process)
+        private static string ParseName(ManagementBaseObject process)
         {
-            string name = (string)process["Name"];
-            uint pid = (uint)process["ProcessId"];
+            return (string)process["Name"];
+        }
 
+        private static uint ParsePid(ManagementBaseObject process)
+        {
+            return (uint)process["ProcessId"];
+        }
+
+        private static ProcessInfo ParseManagementProcess(string name, uint pid, string knownExecutablePath)
+        {
             SafeProcessHandle hProcess = NativeMethods.OpenProcess(ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-            string exePath;
+
+            string exePath = knownExecutablePath;
             if (!hProcess.IsInvalid)
             {
                 char[] buffer = new char[1024];
                 uint size = 1024;
                 bool success = NativeMethods.QueryFullProcessImageNameW(hProcess, 0, buffer, ref size);
-                exePath = success ? new string(buffer[..(int)size]) : "";
-            }
-            else
-            {
-                exePath = "";
+                if (success)
+                    exePath = new string(buffer[..(int)size]);
             }
 
             return new(name, exePath, pid, new ProcessHandlerWindows(name, pid, hProcess));

@@ -9,6 +9,7 @@
     <UseWPF>true</UseWPF>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <SatelliteResourceLanguages>none</SatelliteResourceLanguages>
   </PropertyGroup>
 
