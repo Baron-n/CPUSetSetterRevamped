@@ -116,6 +116,12 @@ namespace CPUSetSetter.UI.Tabs.Processes
                 {
                     RunningProcesses.Add(new ProcessListEntryViewModel(pInfo));
                 }
+                else
+                {
+                    // Both the trace and the polling listeners can fire for the same process;
+                    // dispose the duplicate's process handler so its OS handle is released
+                    pInfo.ProcessHandler.Dispose();
+                }
             });
         }
 

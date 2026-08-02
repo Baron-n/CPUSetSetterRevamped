@@ -294,7 +294,7 @@ namespace CPUSetSetter.UI.Tabs.Masks
             if (BoolMask is not null)
                 BoolMask.CollectionChanged -= OnOuterMaskChanged;
             if (Hotkeys is not null)
-                Hotkeys.CollectionChanged -= OnOuterMaskChanged;
+                Hotkeys.CollectionChanged -= OnOuterHotkeysChanged;
 
             foreach (MaskBitViewModel maskBit in innerMask)
             {

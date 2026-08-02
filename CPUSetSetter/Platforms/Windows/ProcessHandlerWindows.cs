@@ -210,34 +210,43 @@ namespace CPUSetSetter.Platforms.Windows
                     // Clear both restriction types so the process is fully unrestricted, regardless of the tracked state
                     bool affinityCleared = ApplyAffinity(mask);
                     bool cpuSetCleared = ApplyCpuSet(mask);
-                    result = affinityCleared || cpuSetCleared;
+                    // A partial clear is a failure: the process stays constrained to whatever was not cleared
+                    result = affinityCleared && cpuSetCleared;
+                    if (!result)
+                        WindowLogger.Write($"WARNING: Partial clear of '{_executableName}' (Affinity cleared: {affinityCleared}, CPU Set cleared: {cpuSetCleared}); the process may still be restricted");
                     break;
 
                 case MaskApplyType.CPUSet:
                     // Always clear the Affinity first: if a stale Affinity overlaps the CPU Set badly (e.g. empty intersection),
                     // the threads would keep running on the Affinity's cores instead of the CPU Set's
-                    ApplyAffinity(LogicalProcessorMask.NoMask);
+                    bool affinityClearedBeforeCpuSet = ApplyAffinity(LogicalProcessorMask.NoMask);
                     result = ApplyCpuSet(mask);
+                    if (!affinityClearedBeforeCpuSet)
+                        WindowLogger.Write($"WARNING: Could not clear Affinity of '{_executableName}' before applying CPU Set; a stale Affinity will constrain the CPU Set");
                     break;
 
                 case MaskApplyType.Affinity:
                     // Always clear the CPU Set first: a stale CPU Set would otherwise keep restricting the threads
-                    ApplyCpuSet(LogicalProcessorMask.NoMask);
+                    bool cpuSetClearedBeforeAffinity = ApplyCpuSet(LogicalProcessorMask.NoMask);
                     result = ApplyAffinity(mask);
+                    if (!cpuSetClearedBeforeAffinity)
+                        WindowLogger.Write($"WARNING: Could not clear CPU Set of '{_executableName}' before applying Affinity; a stale CPU Set will constrain the Affinity");
                     break;
 
                 default:
                     throw new NotImplementedException();
             }
 
-            _previousMaskType = mask.MaskType;
+            if (result)
+                _previousMaskType = mask.MaskType;
             return result;
         }
 
         public bool ReapplyMask(LogicalProcessorMask mask)
         {
+            // If the mask type changed since the last successful apply, apply it fresh (don't just assume it's up to date)
             if (_previousMaskType != mask.MaskType)
-                return true;
+                return ApplyMask(mask);
 
             bool[] actualMask;
             try
@@ -248,6 +257,21 @@ namespace CPUSetSetter.Platforms.Windows
                     MaskApplyType.Affinity => GetAffinityMask(),
                     _ => throw new NotImplementedException(),
                 };
+
+                // A CPU Set is constricted to the intersection of the CPU Set and the process Affinity,
+                // so verify a stale/narrow Affinity is not limiting the CPU Set's effect
+                if (mask.MaskType == MaskApplyType.CPUSet)
+                {
+                    bool[] affinityMask = GetAffinityMask();
+                    bool affinityIsAllCores = affinityMask.All(enabled => enabled);
+                    if (!affinityIsAllCores)
+                    {
+                        WindowLogger.Write($"WARNING: '{_executableName}' has a restrictive Affinity ({GetCurrentRestrictionInfo()}) constraining its CPU Set; clearing it before reapplying");
+                        if (!ApplyAffinity(LogicalProcessorMask.NoMask))
+                            return false;
+                        return ApplyCpuSet(mask);
+                    }
+                }
             }
             catch (InvalidOperationException)
             {
@@ -316,11 +340,17 @@ namespace CPUSetSetter.Platforms.Windows
             success = NativeMethods.SetProcessDefaultCpuSets(setLimitedInfoHandle, cpuSetIdsArray, (uint)cpuSetIdsArray.Length);
             if (success)
             {
-                // The process default CPU Set only applies to threads created after it is set, so pin existing threads too
+                // The process default CPU Set only applies to threads created after it is set, so pin existing threads too.
+                // An empty CPU Set means "no cores", so existing threads must have their per-thread pins released as well
                 if (cpuSetIdsArray.Length > 0)
                 {
                     _activeCpuSetMask = mask.BoolMask.ToArray();
                     SetCpuSetsForAllThreads(cpuSetIdsArray);
+                }
+                else
+                {
+                    _activeCpuSetMask = null;
+                    SetCpuSetsForAllThreads(null);
                 }
                 WindowLogger.Write($"Applied CPU Set '{mask.Name}' to '{_executableName}'");
                 return true;
@@ -385,8 +415,8 @@ namespace CPUSetSetter.Platforms.Windows
             bool[] result = new bool[CpuInfo.LogicalProcessorCount];
             foreach (uint cpuSetId in cpuSetIds)
             {
-                int logicalProcessor = _setIdToLogicalProcessor[cpuSetId];
-                result[logicalProcessor] = true;
+                if (_setIdToLogicalProcessor.TryGetValue(cpuSetId, out int logicalProcessor))
+                    result[logicalProcessor] = true;
             }
             return result;
         }

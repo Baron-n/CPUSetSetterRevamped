@@ -2,6 +2,12 @@
 
 ## Revamped
 
+### v2.8.0
+
+#### Bug fixes
+- **CPU Set / Affinity integrity.** Fixed cases where a stale or narrow Affinity silently constrained an applied CPU Set (and vice versa), making a CPU Set behave like an Affinity. A failed cross-clear is now surfaced in the log instead of being hidden, a "clear" is only reported as success when both restriction types are actually gone, an empty CPU Set mask now releases existing threads' per-thread CPU Set pins, and the reapply loop now detects and repairs a drifted restriction of the other type. Also fixed a potential crash in the CPU Set read-back and a wrong-handler unsubscribe in the mask editor.
+- **Fixed an OS handle leak** where both the trace and polling process listeners fired for the same process start, leaving the duplicate's process handle open.
+
 ### v2.5.0
 
 #### New features
