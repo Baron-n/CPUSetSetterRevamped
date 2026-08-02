@@ -4,7 +4,7 @@
     <img height="75" src="Images/Logo.png">
 </p>
 
-Make your games and apps run on the right CPU cores &mdash; for smoother performance on AMD Dual-CCD and Intel Hybrid processors. **CPU Set Setter Revamped** is a maintained fork of [CPU Set Setter](https://github.com/SimonvBez/CPUSetSetter) by [SimonvBez](https://github.com/SimonvBez), with CPU Set correctness fixes and a per-core usage heatmap.
+Make your games and apps run on the right CPU cores &mdash; for smoother performance on AMD Dual-CCD and Intel Hybrid processors. **CPU Set Setter Revamped** is a maintained fork of [CPU Set Setter](https://github.com/SimonvBez/CPUSetSetter) by [SimonvBez](https://github.com/SimonvBez), with CPU Set bug fixes and new features such as a per-core usage heatmap etc.
 
 **Requirements:**
 - **Windows 10+**
