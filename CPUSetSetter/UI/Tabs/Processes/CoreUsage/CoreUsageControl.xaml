@@ -8,62 +8,88 @@
              x:Name="root">
 
     <UserControl.Resources>
-        <local:RelativeToAbsoluteConverter x:Key="RelativeToAbsoluteConverter"/>
+        <local:UtilityToBrushConverter x:Key="UtilityToBrushConverter"/>
     </UserControl.Resources>
 
-    <ItemsControl x:Name="coreUsagesItemsControl">
+    <Grid Margin="2,4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-        <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-                <UniformGrid Rows="2"/>
-            </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
+        <!--Header-->
+        <Grid Grid.Row="0" Margin="2,0,2,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Core Usage"
+                       FontWeight="SemiBold"
+                       FontSize="11"
+                       Foreground="{DynamicResource DisabledForegroundBrush}"/>
+            <TextBlock Grid.Column="1"
+                       FontSize="10.5"
+                       Foreground="{DynamicResource DisabledForegroundBrush}">
+                <Run Text="Total: "/>
+                <Run Text="{Binding TotalUsageStr, ElementName=root}" FontWeight="SemiBold"/>
+            </TextBlock>
+        </Grid>
 
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <!-- Background bar -->
-                <Border Grid.Row="0" Margin="1"
-                        BorderBrush="{Binding BarBorderBrush, ElementName=root}"
-                        BorderThickness="1"
-                        SnapsToDevicePixels="True"
-                        ToolTip="{Binding Name}">
+        <!--Per-core heat cells-->
+        <ItemsControl Grid.Row="1" x:Name="coreUsagesItemsControl">
 
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Background" Value="{Binding BarBackground, ElementName=root}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsParked}" Value="True">
-                                    <Setter Property="Background" Value="{Binding BarParkedBackground, ElementName=root}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="2"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
 
-                    <!-- Core utility bar-->
-                    <Border CornerRadius="1,1,0,0"
-                            VerticalAlignment="Bottom">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <!--Heat cell: filled by usage fraction, tinted gray when parked-->
+                    <Border Margin="1"
+                            CornerRadius="3"
+                            BorderThickness="0.5"
+                            BorderBrush="#40000000"
+                            SnapsToDevicePixels="True"
+                            ToolTip="{Binding Name}">
 
                         <Border.Style>
                             <Style TargetType="Border">
-                                <Setter Property="Background" Value="{Binding BarForeground, ElementName=root}"/>
+                                <Setter Property="Background" Value="{Binding Utility, Converter={StaticResource UtilityToBrushConverter}}"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsParked}" Value="True">
-                                        <Setter Property="Background" Value="{Binding BarParkedForeground, ElementName=root}"/>
+                                        <Setter Property="Background" Value="{DynamicResource CoreUsageBarParkedBackgroundBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
 
-                        <Border.Height>
-                            <MultiBinding Converter="{StaticResource RelativeToAbsoluteConverter}">
-                                <Binding Path="Utility"/>
-                                <Binding RelativeSource="{RelativeSource AncestorType=Border}" Path="ActualHeight"/>
-                            </MultiBinding>
-                        </Border.Height>
+                        <Grid>
+                            <TextBlock Text="{Binding UtilityStr}"
+                                       Foreground="White"
+                                       FontSize="8"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="Black" Opacity="0.6" BlurRadius="1.2" ShadowDepth="0.4"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="White"
+                                       FontSize="5.5"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Bottom"
+                                       Margin="0,0,0,1">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="Black" Opacity="0.6" BlurRadius="1" ShadowDepth="0.3"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </Grid>
                     </Border>
-                </Border>
-
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
 </UserControl>

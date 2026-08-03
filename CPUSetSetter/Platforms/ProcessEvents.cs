@@ -20,6 +20,24 @@
         public static void Start() => Default.Start();
 
         /// <summary>
+        /// Re-enumerate all running processes, firing <see cref="ProcessCreated"/> for each of them so the
+        /// process list is resynchronized with the OS. Existing entries are deduplicated by PID on the receiving side
+        /// </summary>
+        public static void Rescan() => Default.Rescan();
+
+        /// <summary>
+        /// Enumerate the PIDs of all current processes
+        /// </summary>
+        public static HashSet<uint> GetCurrentProcessPids()
+        {
+#if WINDOWS
+            return ProcessEventsWindows.GetCurrentProcessPids();
+#else
+            return [];
+#endif
+        }
+
+        /// <summary>
         /// Create a process handler for a given PID, e.g. for the Benchmark feature.
         /// Returns null when the process cannot be opened
         /// </summary>
@@ -45,6 +63,7 @@
         event EventHandler<ExitedProcessEventArgs>? ProcessExited;
 
         void Start();
+        void Rescan();
     }
 
     public class ProcessInfo

@@ -6,6 +6,7 @@
       xmlns:local="clr-namespace:CPUSetSetter.UI.Tabs.Processes"
       xmlns:config="clr-namespace:CPUSetSetter.Config.Models"
       xmlns:ui="clr-namespace:CPUSetSetter.UI"
+      xmlns:uiConv="clr-namespace:CPUSetSetter.UI.Converters"
       xmlns:coreuse="clr-namespace:CPUSetSetter.UI.Tabs.Processes.CoreUsage"
       d:DataContext="{d:DesignInstance Type=local:ProcessesTabViewModel}"
       mc:Ignorable="d">
@@ -19,41 +20,114 @@
 
     <Grid.Resources>
         <coreuse:UtilityToBrushConverter x:Key="UtilityToBrushConverter"/>
+        <uiConv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <uiConv:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
+
+        <!--Restriction chip styles-->
+        <Style x:Key="ChipStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="7,1.5"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
     </Grid.Resources>
 
-    <!--Search Bar-->
-    <Grid Grid.Row="0"
-          Margin="3,5,0,0">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
+    <!--Toolbar-->
+    <Border Grid.Row="0" Padding="6,8,6,4">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Column="0"
-                   Text="Search:"
-                   VerticalAlignment="Center"/>
+            <!--Search-->
+            <Grid Grid.Column="0" Margin="0,0,8,0">
+                <TextBox x:Name="searchBox"
+                         Height="28"
+                         MaxLines="1"
+                         FontSize="13"
+                         Padding="24,0,6,0"
+                         Text="{Binding ProcessNameFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         TextChanged="SearchBox_TextChanged"/>
+                <StackPanel Orientation="Horizontal"
+                            IsHitTestVisible="False"
+                            VerticalAlignment="Center"
+                            Margin="8,0,0,0">
+                    <Path Data="M 0 0 L 8 8 M 0 0 A 4 4 0 1 1 8 0 A 4 4 0 1 1 0 0 M 5 5 L 8 8"
+                          Stroke="{DynamicResource DisabledForegroundBrush}"
+                          StrokeThickness="1.4"
+                          Width="14"
+                          Height="14"
+                          Stretch="Uniform"/>
+                    <TextBlock x:Name="searchWatermark"
+                               Text="Search processes (Ctrl+K)"
+                               Foreground="{DynamicResource DisabledForegroundBrush}"
+                               FontSize="13"
+                               Margin="6,0,0,0"/>
+                </StackPanel>
+            </Grid>
 
-        <TextBox Grid.Column="1"
-                 Margin="5,0,0,0"
-                 MaxLines="1"
-                 FontSize="14"
-                 Text="{Binding ProcessNameFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            <!--Refresh-->
+            <Button Grid.Column="1"
+                    Height="28"
+                    Padding="10,0"
+                    Margin="0,0,6,0"
+                    ToolTip="Rescan running processes"
+                    Click="Refresh_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Path Data="M 2 8 A 6 6 0 1 1 8 2 M 8 0 V 3 H 5"
+                          Stroke="{DynamicResource ForegroundBrush}"
+                          StrokeThickness="1.5"
+                          Width="14"
+                          Height="14"
+                          Stretch="Uniform"/>
+                    <TextBlock Text="Refresh" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
-        <Button Grid.Column="2"
-                Margin="5,0,0,0"
-                Padding="8,2"
-                VerticalAlignment="Center"
-                Content="Benchmark..."
-                Click="Benchmark_Click"/>
-    </Grid>
+            <!--Pause / Resume-->
+            <Button x:Name="pauseButton"
+                    Grid.Column="2"
+                    Height="28"
+                    Padding="10,0"
+                    Margin="0,0,6,0"
+                    ToolTip="Pause/resume the live-sorted list"
+                    Click="Pause_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Path x:Name="pauseIcon"
+                          Data="M 2 2 H 5 V 11 H 2 Z M 8 2 H 11 V 11 H 8 Z"
+                          Fill="{DynamicResource ForegroundBrush}"
+                          Width="14"
+                          Height="14"
+                          Stretch="Uniform"/>
+                    <TextBlock x:Name="pauseLabel" Text="Pause" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <!--Benchmark-->
+            <Button Grid.Column="3"
+                    Height="28"
+                    Padding="10,0"
+                    Style="{StaticResource PrimaryButton}"
+                    Click="Benchmark_Click"
+                    ToolTip="Open the Benchmark tab">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Benchmark" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+    </Border>
 
     <!--Process list-->
     <DataGrid Grid.Row="1"
-              Margin="0,10,0,8"
+              Margin="0,0,0,8"
               ItemsSource="{Binding RunningProcesses}"
               AutoGenerateColumns="False"
-              RowHeight="24"
+              RowHeight="34"
               HeadersVisibility="Column"
               CanUserReorderColumns="False"
               CanUserDeleteRows="False"
@@ -69,9 +143,9 @@
             <DataTemplate>
                 <Border Margin="8,2,8,4"
                         Padding="6,4"
-                        BorderBrush="#808080"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1"
-                        CornerRadius="3"
+                        CornerRadius="4"
                         SnapsToDevicePixels="True">
                     <StackPanel>
                         <Grid>
@@ -89,8 +163,8 @@
                             <TextBlock Grid.Column="1"
                                        Margin="10,0"
                                        Text="{Binding BusiestCoresStr}"
-                                       FontSize="11"
-                                       Foreground="#808080"
+                                       FontSize="11.5"
+                                       Foreground="{DynamicResource ForegroundBrush}"
                                        TextTrimming="CharacterEllipsis"
                                        VerticalAlignment="Center"/>
 
@@ -104,8 +178,9 @@
 
                         <TextBlock Text="{Binding ActiveRestrictionInfo}"
                                    Margin="0,2,0,0"
-                                   FontSize="10.5"
-                                   Foreground="#80a5b0"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   FontWeight="Medium"
                                    TextTrimming="CharacterEllipsis"/>
 
                         <ItemsControl ItemsSource="{Binding PerCoreUsagesView}" Margin="0,4,0,0">
@@ -181,14 +256,111 @@
                                 Width="3*">
             </DataGridTextColumn>
 
-            <!--Average CPU usage column-->
-            <DataGridTextColumn Header="Avg CPU"
-                                Binding="{Binding AverageCpuPercentageStr}"
-                                SortMemberPath="AverageCpuUsage"
-                                IsReadOnly="True"
-                                CanUserResize="False"
-                                Width="Auto"
-                                ui:DataGridExtensions.SortDesc="True"/>
+            <!--Restriction chips column-->
+            <DataGridTemplateColumn Header="Restriction"
+                                    Width="158"
+                                    SortMemberPath="HasCpuSetRestriction"
+                                    ui:DataGridExtensions.SortDesc="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Style="{StaticResource ChipStyle}"
+                                    Background="#3B82F6"
+                                    Visibility="{Binding HasCpuSetRestriction, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    ToolTip="This process is restricted to a CPU Set">
+                                <TextBlock Text="CPU Set"
+                                           Foreground="White"
+                                           FontSize="10.5"
+                                           FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Style="{StaticResource ChipStyle}"
+                                    Background="#F59E0B"
+                                    Visibility="{Binding HasAffinityRestriction, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    ToolTip="This process has a narrowed Affinity mask">
+                                <TextBlock Text="Affinity"
+                                           Foreground="White"
+                                           FontSize="10.5"
+                                           FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Style="{StaticResource ChipStyle}"
+                                    Background="#22C55E"
+                                    Visibility="{Binding HasRuleMatch, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    ToolTip="A rule matches this process and applies a mask automatically">
+                                <TextBlock Text="Rule Match"
+                                           Foreground="White"
+                                           FontSize="10.5"
+                                           FontWeight="SemiBold"/>
+                            </Border>
+                        </StackPanel>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!--Average CPU usage column with bar-->
+            <DataGridTemplateColumn Header="Avg CPU"
+                                    Width="120"
+                                    SortMemberPath="AverageCpuUsage"
+                                    CanUserResize="False"
+                                    ui:DataGridExtensions.SortDesc="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <Grid VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="86"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0"
+                                    Height="6"
+                                    CornerRadius="3"
+                                    Background="{DynamicResource HoverBackgroundBrush}"
+                                    VerticalAlignment="Center">
+                                <Border CornerRadius="3"
+                                        HorizontalAlignment="Left"
+                                        Background="{DynamicResource AccentBrush}"
+                                        Width="{Binding AverageCpuUsage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=86}"/>
+                            </Border>
+                            <TextBlock Grid.Column="1"
+                                       Margin="8,0,0,0"
+                                       Text="{Binding AverageCpuPercentageStr}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!--Current CPU usage column with bar-->
+            <DataGridTemplateColumn Header="Current"
+                                    Width="110"
+                                    SortMemberPath="CurrentCpuUsage"
+                                    CanUserResize="False"
+                                    ui:DataGridExtensions.SortDesc="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <Grid VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="76"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0"
+                                    Height="6"
+                                    CornerRadius="3"
+                                    Background="{DynamicResource HoverBackgroundBrush}"
+                                    VerticalAlignment="Center">
+                                <Border CornerRadius="3"
+                                        HorizontalAlignment="Left"
+                                        Background="#22C55E"
+                                        Width="{Binding CurrentCpuUsage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=76}"/>
+                            </Border>
+                            <TextBlock Grid.Column="1"
+                                       Margin="8,0,0,0"
+                                       Text="{Binding CurrentCpuPercentageStr}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
             <!--Core mask column-->
             <DataGridTemplateColumn Header="Core Mask"

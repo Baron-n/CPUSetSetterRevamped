@@ -3,6 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:platforms="clr-namespace:CPUSetSetter.Platforms"
         xmlns:proc="clr-namespace:CPUSetSetter.UI.Tabs.Processes"
         xmlns:masks="clr-namespace:CPUSetSetter.UI.Tabs.Masks"
         xmlns:rules="clr-namespace:CPUSetSetter.UI.Tabs.Rules"
@@ -13,52 +15,229 @@
         Height="574"
         MinHeight="574"
         Width="1020"
-        MinWidth="900">
+        MinWidth="900"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource ForegroundBrush}">
 
-    <TabControl>
-        <!--Processes Tab-->
-        <TabItem>
-            <TabItem.Header>
-                <TextBlock Text="Processes"/>
-            </TabItem.Header>
+    <WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="34"
+                            ResizeBorderThickness="6"
+                            CornerRadius="0"
+                            GlassFrameThickness="1"
+                            UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
-            <proc:ProcessesTab/>
-        </TabItem>
+    <Grid x:Name="RootLayout">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="34"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-        <!--Benchmark Tab-->
-        <TabItem x:Name="BenchmarkTabItem">
-            <TabItem.Header>
-                <TextBlock Text="Benchmark"/>
-            </TabItem.Header>
+        <!--Custom title bar-->
+        <Border Grid.Row="0"
+                Background="{DynamicResource TitleBarBrush}">
+            <Grid Margin="10,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <benchmark:BenchmarkTab/>
-        </TabItem>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Width="16" Height="16"
+                           Source="pack://application:,,,/CPUSetSetter;component/tray.ico"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           VerticalAlignment="Center"/>
+                    <TextBlock Text="CPU Set Setter Revamped"
+                               Foreground="{DynamicResource TitleBarForegroundBrush}"
+                               FontWeight="SemiBold"
+                               FontSize="13"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
 
-        <!--Masks Tab-->
-        <TabItem>
-            <TabItem.Header>
-                <TextBlock Text="Masks"/>
-            </TabItem.Header>
+                <Border Grid.Column="1"
+                        Background="{DynamicResource StatusPillBackgroundBrush}"
+                        BorderBrush="{DynamicResource StatusPillBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="11"
+                        Padding="9,2"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center"
+                        ToolTip="Application monitoring is active">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse x:Name="StatusDot"
+                                 Width="7" Height="7"
+                                 Fill="{DynamicResource StatusDotBrush}"
+                                 VerticalAlignment="Center">
+                            <Ellipse.Triggers>
+                                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="StatusDot"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             From="1.0" To="0.25"
+                                                             Duration="0:0:0.9"
+                                                             AutoReverse="True"
+                                                             RepeatBehavior="Forever"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Ellipse.Triggers>
+                        </Ellipse>
+                        <TextBlock Text="{Binding StatusText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   Foreground="{DynamicResource TitleBarForegroundBrush}"
+                                   FontSize="10.5"
+                                   FontWeight="SemiBold"
+                                   Margin="6,0,0,0"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
 
-            <masks:MasksTab/>
-        </TabItem>
+                <!--Window control buttons-->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="MinimizeButton"
+                            Width="42" Height="34"
+                            Click="MinimizeButton_Click"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}">
+                                                <Path Data="M 0 5 L 10 5"
+                                                      Stroke="{DynamicResource TitleBarForegroundBrush}"
+                                                      StrokeThickness="1"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource TitleBarHoverBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
-        <!--Rules-->
-        <TabItem>
-            <TabItem.Header>
-                <TextBlock Text="Rules"/>
-            </TabItem.Header>
+                    <Button x:Name="MaximizeButton"
+                            Width="42" Height="34"
+                            Click="MaximizeButton_Click"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}">
+                                                <Path Data="M 2 2 H 8 V 8 H 2 Z"
+                                                      Stroke="{DynamicResource TitleBarForegroundBrush}"
+                                                      StrokeThickness="1"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource TitleBarHoverBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
-            <rules:RulesTab/>
-        </TabItem>
+                    <Button x:Name="CloseButton"
+                            Width="42" Height="34"
+                            Click="CloseButton_Click"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}">
+                                                <Path Data="M 1 1 L 9 9 M 9 1 L 1 9"
+                                                      Stroke="{DynamicResource TitleBarForegroundBrush}"
+                                                      StrokeThickness="1.2"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource TitleBarCloseHoverBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
 
-        <!--Settings-->
-        <TabItem>
-            <TabItem.Header>
-                <TextBlock Text="Settings"/>
-            </TabItem.Header>
+        <!--Tabs (custom template gives the header a dark strip)-->
+        <TabControl Grid.Row="1" x:Name="MainTabs">
+            <!--Processes Tab-->
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Text="Processes"/>
+                </TabItem.Header>
 
-            <settings:SettingsTab/>
-        </TabItem>
-    </TabControl>
+                <proc:ProcessesTab/>
+            </TabItem>
+
+            <!--Benchmark Tab-->
+            <TabItem x:Name="BenchmarkTabItem">
+                <TabItem.Header>
+                    <TextBlock Text="Benchmark"/>
+                </TabItem.Header>
+
+                <benchmark:BenchmarkTab/>
+            </TabItem>
+
+            <!--Masks Tab-->
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Text="Masks"/>
+                </TabItem.Header>
+
+                <masks:MasksTab/>
+            </TabItem>
+
+            <!--Rules-->
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Text="Rules"/>
+                </TabItem.Header>
+
+                <rules:RulesTab/>
+            </TabItem>
+
+            <!--Settings-->
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Text="Settings"/>
+                </TabItem.Header>
+
+                <settings:SettingsTab/>
+            </TabItem>
+        </TabControl>
+    </Grid>
 </Window>

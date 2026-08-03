@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using CPUSetSetter.Config.Models;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -21,7 +22,20 @@ namespace CPUSetSetter.UI.Tabs.Processes
             DataContext = viewModel;
             InitializeComponent();
 
-            Loaded += (_, _) => logBox.ScrollToEnd();
+            Loaded += (_, _) =>
+            {
+                logBox.ScrollToEnd();
+                PreviewKeyDown += (_, e) => HandlePreviewKeyDown(e);
+            };
+        }
+
+        private void HandlePreviewKeyDown(System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.K && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                searchBox.Focus();
+                e.Handled = true;
+            }
         }
 
         private void Log_TextChanged(object sender, TextChangedEventArgs e)
@@ -29,10 +43,37 @@ namespace CPUSetSetter.UI.Tabs.Processes
             logBox.ScrollToEnd();
         }
 
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            searchWatermark.Visibility = string.IsNullOrEmpty(searchBox.Text) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         private void Benchmark_Click(object sender, RoutedEventArgs e)
         {
             if (App.Current.MainWindow is MainWindow mainWindow)
                 mainWindow.SelectBenchmarkTab();
+        }
+
+        /// <summary>
+        /// Re-scan the process list: remove exited processes and re-add anything that was missed
+        /// </summary>
+        private void Refresh_Click(object sender, RoutedEventArgs e)
+        {
+            viewModel.RefreshProcessList();
+        }
+
+        /// <summary>
+        /// Toggle the manual pause of the live-sorted process list
+        /// </summary>
+        private void Pause_Click(object sender, RoutedEventArgs e)
+        {
+            viewModel.ToggleManualPause();
+            bool paused = viewModel.IsManuallyPaused;
+
+            pauseLabel.Text = paused ? "Resume" : "Pause";
+            pauseIcon.Data = paused
+                ? Geometry.Parse("M 2 2 L 11 6.5 L 2 11 Z") // play triangle
+                : Geometry.Parse("M 2 2 H 5 V 11 H 2 Z M 8 2 H 11 V 11 H 8 Z"); // pause bars
         }
 
         /// <summary>

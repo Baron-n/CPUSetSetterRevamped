@@ -13,6 +13,13 @@ namespace CPUSetSetter.Platforms
         double GetAverageCpuUsage();
 
         /// <summary>
+        /// Get the current (instantaneous) and average CPU usage of the process in a single query.
+        /// The current usage is the CPU time delta since the previous sample; the average usage spans
+        /// the buffer window (~30 seconds). Both are 0..1 fractions of all logical processors
+        /// </summary>
+        void GetCpuUsage(out double currentUsage, out double averageUsage);
+
+        /// <summary>
         /// Get the CPU usage of the process attributed to each logical processor, sampled since the previous call
         /// </summary>
         /// <returns>An array of length <see cref="CpuInfo.LogicalProcessorCount"/> with fractions between 0 and 1 per logical processor. Null on fail</returns>

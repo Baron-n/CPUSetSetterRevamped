@@ -194,6 +194,7 @@
 
             <!--Create Program Rule button-->
             <Button Grid.Column="0" Margin="0,0,10,0"
+                    Style="{StaticResource PrimaryButton}"
                     Command="{Binding CreateProgramRuleCommand}"
                     Content="Create..."/>
 
@@ -317,6 +318,7 @@
         </Grid.ColumnDefinitions>
 
         <Button Grid.Column="0" Margin="0,0,10,0"
+                Style="{StaticResource PrimaryButton}"
                 Command="{Binding CreateRuleTemplateCommand}"
                 Content="Create..."/>
 

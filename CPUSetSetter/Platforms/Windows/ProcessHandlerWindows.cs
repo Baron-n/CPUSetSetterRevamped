@@ -50,9 +50,17 @@ namespace CPUSetSetter.Platforms.Windows
 
         public double GetAverageCpuUsage()
         {
+            GetCpuUsage(out _, out double averageUsage);
+            return averageUsage;
+        }
+
+        public void GetCpuUsage(out double currentUsage, out double averageUsage)
+        {
+            currentUsage = -1;
+            averageUsage = -1;
             if (_queryLimitedInfoHandle.IsInvalid)
             {
-                return -1;
+                return;
             }
 
             DateTime now = DateTime.Now;
@@ -74,20 +82,37 @@ namespace CPUSetSetter.Platforms.Windows
             bool success = NativeMethods.GetProcessTimes(_queryLimitedInfoHandle, out FILETIME _, out FILETIME _, out FILETIME kernelTime, out FILETIME userTime);
             if (!success)
             {
-                return -1;
+                return;
             }
             TimeSpan totalCpuTime = TimeSpan.FromTicks((long)(kernelTime.ULong + userTime.ULong));
+
+            // Current usage: the CPU time delta since the previous datapoint (roughly the last second)
+            CpuTimeTimestamp? previousDatapoint = _cpuTimeMovingAverageBuffer.Count > 0 ? _cpuTimeMovingAverageBuffer.Last() : null;
             _cpuTimeMovingAverageBuffer.Enqueue(new() { Timestamp = now, TotalCpuTime = totalCpuTime });
 
-            // Take the CPU time from now and (up to) a minute ago, and get the average usage %
-            CpuTimeTimestamp startDatapoint = _cpuTimeMovingAverageBuffer.Peek();
-            TimeSpan deltaTime = now - startDatapoint.Timestamp;
-            TimeSpan deltaCpuTime = totalCpuTime - startDatapoint.TotalCpuTime;
-
-            if (deltaCpuTime.Ticks == 0)
-                return 0;
+            if (previousDatapoint is { } previous)
+            {
+                TimeSpan deltaTime = now - previous.Timestamp;
+                TimeSpan deltaCpuTime = totalCpuTime - previous.TotalCpuTime;
+                if (deltaTime.Ticks > 0 && deltaCpuTime.Ticks > 0)
+                    currentUsage = (double)deltaCpuTime.Ticks / deltaTime.Ticks / CpuInfo.LogicalProcessorCount;
+                else
+                    currentUsage = 0;
+            }
             else
-                return (double)deltaCpuTime.Ticks / deltaTime.Ticks / CpuInfo.LogicalProcessorCount;
+            {
+                currentUsage = 0;
+            }
+
+            // Average usage: take the CPU time from now and (up to) 30 seconds ago
+            CpuTimeTimestamp startDatapoint = _cpuTimeMovingAverageBuffer.Peek();
+            TimeSpan avgDeltaTime = now - startDatapoint.Timestamp;
+            TimeSpan avgDeltaCpuTime = totalCpuTime - startDatapoint.TotalCpuTime;
+
+            if (avgDeltaCpuTime.Ticks == 0)
+                averageUsage = 0;
+            else
+                averageUsage = (double)avgDeltaCpuTime.Ticks / avgDeltaTime.Ticks / CpuInfo.LogicalProcessorCount;
         }
 
         /// <summary>

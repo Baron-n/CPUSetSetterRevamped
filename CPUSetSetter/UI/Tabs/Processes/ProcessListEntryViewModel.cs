@@ -41,6 +41,10 @@ namespace CPUSetSetter.UI.Tabs.Processes
         private double _averageCpuUsage;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CurrentCpuPercentageStr))]
+        private double _currentCpuUsage;
+
+        [ObservableProperty]
         private LogicalProcessorMask _mask;
 
         [ObservableProperty]
@@ -52,7 +56,21 @@ namespace CPUSetSetter.UI.Tabs.Processes
         [ObservableProperty]
         private string _activeRestrictionInfo = "";
 
+        /// <summary>Whether a CPU Set restriction is currently active on this process</summary>
+        [ObservableProperty]
+        private bool _hasCpuSetRestriction;
+
+        /// <summary>Whether an Affinity restriction is currently active on this process</summary>
+        [ObservableProperty]
+        private bool _hasAffinityRestriction;
+
+        /// <summary>Whether a ProgramRule matches this process (a Core Mask is applied automatically)</summary>
+        [ObservableProperty]
+        private bool _hasRuleMatch;
+
         public string AverageCpuPercentageStr => AverageCpuUsage == -1 ? "" : $"{AverageCpuUsage * 100:F1}%";
+
+        public string CurrentCpuPercentageStr => CurrentCpuUsage == -1 ? "" : $"{CurrentCpuUsage * 100:F1}%";
 
         /// <summary>
         /// The 3 most used logical processors of this process, for a quick overview
@@ -81,6 +99,7 @@ namespace CPUSetSetter.UI.Tabs.Processes
 
             ProgramRule? programRule = RuleHelpers.GetProgramRuleOrNull(pInfo.ImagePath);
             programRule?.AddRunningProcess(this);
+            HasRuleMatch = programRule is not null;
 
             LogicalProcessorMask mask = programRule?.Mask ?? LogicalProcessorMask.NoMask;
             SetMask(mask, false);
@@ -90,9 +109,14 @@ namespace CPUSetSetter.UI.Tabs.Processes
             AverageCpuUsage = _processHandler.GetAverageCpuUsage();
         }
 
+        /// <summary>
+        /// Refresh the current (instantaneous) and average CPU usage in a single OS query. Call from the UI thread
+        /// </summary>
         public void UpdateCpuUsage()
         {
-            AverageCpuUsage = _processHandler.GetAverageCpuUsage();
+            _processHandler.GetCpuUsage(out double currentUsage, out double averageUsage);
+            CurrentCpuUsage = currentUsage;
+            AverageCpuUsage = averageUsage;
         }
 
         /// <summary>
@@ -100,9 +124,32 @@ namespace CPUSetSetter.UI.Tabs.Processes
         /// </summary>
         public void UpdatePerCoreUsage()
         {
-            double[]? perCoreUsages = _processHandler.GetPerCoreCpuUsage();
-            ActiveRestrictionInfo = _processHandler.GetCurrentRestrictionInfo() ?? "";
+            ApplyPerCoreUsage(SamplePerCoreUsage());
+            UpdateRestrictionInfo();
+        }
 
+        /// <summary>
+        /// Sample the per-core CPU usage off the UI thread. Expensive: enumerates every thread of the process
+        /// </summary>
+        public double[]? SamplePerCoreUsage()
+        {
+            return _processHandler.GetPerCoreCpuUsage();
+        }
+
+        /// <summary>
+        /// Refresh the restriction text and chips. Call from the UI thread; does not sample per-core usage
+        /// </summary>
+        public void UpdateRestrictionInfo()
+        {
+            ActiveRestrictionInfo = _processHandler.GetCurrentRestrictionInfo() ?? "";
+            UpdateRestrictionChips(ActiveRestrictionInfo);
+        }
+
+        /// <summary>
+        /// Apply a sampled per-core usage array to the heat cells. Call from the UI thread
+        /// </summary>
+        public void ApplyPerCoreUsage(double[]? perCoreUsages)
+        {
             if (perCoreUsages is null)
                 return;
 
@@ -117,6 +164,13 @@ namespace CPUSetSetter.UI.Tabs.Processes
                 _perCoreUsagesView.Refresh();
             else
                 _perCoreUsagesView.Dispatcher.Invoke(() => _perCoreUsagesView.Refresh());
+        }
+
+        private void UpdateRestrictionChips(string restrictionInfo)
+        {
+            HasCpuSetRestriction = restrictionInfo.StartsWith("CPU Set:", StringComparison.Ordinal);
+            HasAffinityRestriction = restrictionInfo.StartsWith("Affinity:", StringComparison.Ordinal)
+                && !restrictionInfo.Contains("all cores", StringComparison.Ordinal);
         }
 
         public void ReapplyMask()

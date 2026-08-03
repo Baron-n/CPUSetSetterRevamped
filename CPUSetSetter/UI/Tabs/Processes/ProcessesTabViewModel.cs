@@ -27,6 +27,12 @@ namespace CPUSetSetter.UI.Tabs.Processes
         [ObservableProperty]
         private ProcessListEntryViewModel? _selectedProcess;
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsPaused))]
+        private bool _isManuallyPaused;
+
+        public bool IsPaused => IsManuallyPaused;
+
         public ProcessesTabViewModel(Dispatcher dispatcher)
         {
             _dispatcher = dispatcher;
@@ -90,9 +96,36 @@ namespace CPUSetSetter.UI.Tabs.Processes
             _sortingPausedByCtrl = false;
             if (runningProcessesView != null)
             {
-                if (!_sortingPausedByTray)
+                if (!_sortingPausedByTray && !IsManuallyPaused)
                     RunningProcesses.SuppressNotifications(false);
-                runningProcessesView.IsLiveSorting = !_sortingPausedByTray;
+                runningProcessesView.IsLiveSorting = !_sortingPausedByTray && !IsManuallyPaused;
+            }
+        }
+
+        /// <summary>
+        /// Toggle the manual pause (toolbar pause button). While paused, live sorting is off and the
+        /// process list stays put so individual rows can be inspected
+        /// </summary>
+        public void ToggleManualPause()
+        {
+            IsManuallyPaused = !IsManuallyPaused;
+        }
+
+        partial void OnIsManuallyPausedChanged(bool value)
+        {
+            if (runningProcessesView != null)
+            {
+                if (value)
+                {
+                    runningProcessesView.IsLiveSorting = false;
+                    RunningProcesses.SuppressNotifications(true);
+                }
+                else if (!_sortingPausedByCtrl && !_sortingPausedByTray)
+                {
+                    RunningProcesses.SuppressNotifications(false);
+                    runningProcessesView.IsLiveSorting = true;
+                    runningProcessesView.Refresh();
+                }
             }
         }
 
@@ -152,14 +185,38 @@ namespace CPUSetSetter.UI.Tabs.Processes
             return RunningProcesses.FirstOrDefault(x => x!.Pid == pid, null);
         }
 
+        /// <summary>
+        /// Re-enumerate all running processes, removing entries that have exited and re-adding any that were missed
+        /// </summary>
+        public void RefreshProcessList()
+        {
+            _dispatcher.Invoke(() =>
+            {
+                HashSet<uint> currentPids = ProcessEvents.GetCurrentProcessPids();
+
+                // Remove any rows whose process no longer exists
+                for (int i = RunningProcesses.Count - 1; i >= 0; --i)
+                {
+                    if (!currentPids.Contains(RunningProcesses[i].Pid))
+                    {
+                        RunningProcesses[i].Dispose();
+                        RunningProcesses.RemoveAt(i);
+                    }
+                }
+
+                // Re-add any processes that were missed (deduplicated by PID on the receiving side)
+                ProcessEvents.Rescan();
+            });
+        }
+
         private async Task ProcessCpuUsageUpdateLoop()
         {
+            int tick = 0;
             while (true)
             {
-                bool windowIsVisible = false;
                 await _dispatcher.InvokeAsync(() =>
                 {
-                    windowIsVisible = App.Current.MainWindow.Visibility == Visibility.Visible;
+                    bool windowIsVisible = App.Current.MainWindow.Visibility == Visibility.Visible;
 
                     // Pause CPU usage, per-core usage and live sorting while minimized to the system tray,
                     // to reduce CPU usage in the background
@@ -182,13 +239,28 @@ namespace CPUSetSetter.UI.Tabs.Processes
                         }
                     }
 
+                    // Current + average CPU usage run every second - they are a single cheap OS query per row
                     foreach (ProcessListEntryViewModel pEntry in RunningProcesses)
                     {
                         pEntry.UpdateCpuUsage();
                     }
-                    // Only the selected process has its per-core usage sampled, as it is the only one shown in the row details
+
+                    // Restriction info/chips are read back from the OS with multiple queries per row, so
+                    // refresh them on a slower cadence (every 3rd tick) to keep the UI thread responsive
+                    if (tick % 3 == 0)
+                    {
+                        foreach (ProcessListEntryViewModel pEntry in RunningProcesses)
+                        {
+                            pEntry.UpdateRestrictionInfo();
+                        }
+                    }
+
+                    // Only the selected process has its per-core usage sampled, as it is the only one
+                    // shown in the row details
                     SelectedProcess?.UpdatePerCoreUsage();
                 });
+
+                tick++;
                 await Task.Delay(1000);
             }
         }

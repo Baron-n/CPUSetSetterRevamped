@@ -16,6 +16,7 @@ namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
     {
         private static bool _isRunning = false;
         private static List<CoreUsage> coreUsages = CpuInfo.LogicalProcessorNames.Select(cpuName => new CoreUsage(cpuName)).ToList();
+        private static CoreUsageControl? _instance;
 
         // DependencyProperties
         public static readonly DependencyProperty BarBackgroundProperty =
@@ -84,9 +85,22 @@ namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
             set => SetValue(BarParkedForegroundProperty, value);
         }
 
+        /// <summary>
+        /// The average usage of all logical processors, shown in the header
+        /// </summary>
+        public static readonly DependencyProperty TotalUsageStrProperty =
+            DependencyProperty.Register(nameof(TotalUsageStr), typeof(string), typeof(CoreUsageControl), new PropertyMetadata("0%"));
+
+        public string TotalUsageStr
+        {
+            get => (string)GetValue(TotalUsageStrProperty);
+            set => SetValue(TotalUsageStrProperty, value);
+        }
+
         public CoreUsageControl()
         {
             InitializeComponent();
+            _instance = this;
 
             coreUsagesItemsControl.ItemsSource = coreUsages;
 
@@ -161,11 +175,17 @@ namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
                     // Apply the new values on the dispatcher to make sure changes are done in the same UI frame
                     await dispatcher.InvokeAsync(() =>
                     {
+                        float total = 0;
                         for (int i = 0; i < coreUsages.Count; ++i)
                         {
                             coreUsages[i].Utility = utilityValues[i];
                             coreUsages[i].IsParked = parkedValues[i];
+                            total += utilityValues[i];
                         }
+
+                        // Update the total on the control instance
+                        if (_instance is { } control)
+                            control.TotalUsageStr = $"{total / coreUsages.Count * 100:F0}%";
                     });
                 }
 

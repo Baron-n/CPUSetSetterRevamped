@@ -1,33 +1,55 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <SolidColorBrush x:Key="BackgroundBrush" Color="White"/>
+    <!-- Accent -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#2563EB"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#1D4ED8"/>
+    <SolidColorBrush x:Key="AccentLightBrush" Color="#DBEAFE"/>
+    <SolidColorBrush x:Key="AccentBorderBrush" Color="#93C5FD"/>
+
+    <!-- Surfaces -->
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#F7F8FA"/>
     <SolidColorBrush x:Key="ControlBackgroundBrush" Color="White"/>
-    <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#F4F4F4"/>
-    <SolidColorBrush x:Key="ClickableBackgroundBrush" Color="#DDDDDD"/>
-    <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#BEE6FD"/>
-    <SolidColorBrush x:Key="SelectedBackgroundBrush" Color="#CCE8FF"/>
+    <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#F1F3F6"/>
+    <SolidColorBrush x:Key="ClickableBackgroundBrush" Color="White"/>
+    <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#EEF2F7"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="#EEF2F7"/>
+    <SolidColorBrush x:Key="SelectedBackgroundBrush" Color="#E3EDFC"/>
 
-    <SolidColorBrush x:Key="ForegroundBrush" Color="Black"/>
-    <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#838383"/>
+    <!-- Title bar -->
+    <SolidColorBrush x:Key="TitleBarBrush" Color="#F1F3F6"/>
+    <SolidColorBrush x:Key="TitleBarForegroundBrush" Color="#1F2430"/>
+    <SolidColorBrush x:Key="TitleBarHoverBrush" Color="#E4E9F0"/>
+    <SolidColorBrush x:Key="TitleBarCloseHoverBrush" Color="#E81123"/>
 
-    <SolidColorBrush x:Key="BorderBrush" Color="#CCCCCC"/>
-    <SolidColorBrush x:Key="DisabledBorderBrush" Color="#ADB2B5"/>
-    <SolidColorBrush x:Key="ClickableBorderBrush" Color="#707070"/>
-    <SolidColorBrush x:Key="HoverBorderBrush" Color="#3C7FB1"/>
+    <!-- Text -->
+    <SolidColorBrush x:Key="ForegroundBrush" Color="#1F2430"/>
+    <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#9AA1AC"/>
+
+    <!-- Borders -->
+    <SolidColorBrush x:Key="BorderBrush" Color="#E4E7EC"/>
+    <SolidColorBrush x:Key="DisabledBorderBrush" Color="#D1D5DB"/>
+    <SolidColorBrush x:Key="ClickableBorderBrush" Color="#D1D5DB"/>
+    <SolidColorBrush x:Key="HoverBorderBrush" Color="#93C5FD"/>
 
     <SolidColorBrush x:Key="ComboBoxItemBackgroundBrush" Color="White"/>
-    <SolidColorBrush x:Key="DataGridHeaderBorderBrush" Color="#CCCCCC"/>
-    <SolidColorBrush x:Key="ScrollBarBackgroundBrush" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="DataGridHeaderBorderBrush" Color="#E4E7EC"/>
+    <SolidColorBrush x:Key="ScrollBarBackgroundBrush" Color="#C6CBD4"/>
 
-    <SolidColorBrush x:Key="ErrorBrush" Color="#D83E3B"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="#EF4444"/>
 
     <Thickness x:Key="GroupBoxBorderThickness">1</Thickness>
 
-    <SolidColorBrush x:Key="CoreUsageBarBackgroundBrush" Color="#C8C8C8"/>
-    <SolidColorBrush x:Key="CoreUsageBarParkedBackgroundBrush" Color="#808080"/>
-    <SolidColorBrush x:Key="CoreUsageBarForegroundBrush" Color="#00ADDA"/>
-    <SolidColorBrush x:Key="CoreUsageBarParkedForegroundBrush" Color="#545E60"/>
-    <SolidColorBrush x:Key="CoreUsageBarBorderBrush" Color="#696969"/>
+    <SolidColorBrush x:Key="CoreUsageBarBackgroundBrush" Color="#E8EBF0"/>
+    <SolidColorBrush x:Key="CoreUsageBarParkedBackgroundBrush" Color="#9AA1AC"/>
+    <SolidColorBrush x:Key="CoreUsageBarForegroundBrush" Color="#22D3EE"/>
+    <SolidColorBrush x:Key="CoreUsageBarParkedForegroundBrush" Color="#6B7280"/>
+    <SolidColorBrush x:Key="CoreUsageBarBorderBrush" Color="#D1D5DB"/>
+
+    <!-- Status pill -->
+    <SolidColorBrush x:Key="StatusPillBackgroundBrush" Color="#E7F6EC"/>
+    <SolidColorBrush x:Key="StatusPillBorderBrush" Color="#9FDFB8"/>
+    <SolidColorBrush x:Key="StatusDotBrush" Color="#22C55E"/>
 
 </ResourceDictionary>

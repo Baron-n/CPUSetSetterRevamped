@@ -47,6 +47,25 @@ namespace CPUSetSetter.Platforms
             }
         }
 
+        public void Rescan()
+        {
+            ListCurrentProcesses();
+        }
+
+        /// <summary>
+        /// Enumerate the PIDs of all current processes
+        /// </summary>
+        public static HashSet<uint> GetCurrentProcessPids()
+        {
+            HashSet<uint> pids = [];
+            ManagementObjectSearcher searcher = new("SELECT ProcessId FROM Win32_Process");
+            foreach (ManagementBaseObject process in searcher.Get())
+            {
+                pids.Add(ParsePid(process));
+            }
+            return pids;
+        }
+
         /// <summary>
         /// Subscribe to the low-latency process events via the ETW-backed Win32_ProcessStartTrace and
         /// Win32_ProcessStopTrace classes, which fire as soon as a process starts or exits.

@@ -99,6 +99,7 @@
         </Grid>
 
         <Button Grid.Row="3" Margin="0,10,0,0"
+                Style="{StaticResource PrimaryButton}"
                 Content="Create"
                 IsEnabled="{Binding CanCreate}"
                 Command="{Binding CreateRuleTemplateCommand}"/>

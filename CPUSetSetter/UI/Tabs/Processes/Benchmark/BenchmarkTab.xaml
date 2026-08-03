@@ -210,6 +210,7 @@
         </StackPanel>
 
         <Button Grid.Column="1" Padding="14,3" Margin="7,0,0,0"
+                Style="{StaticResource PrimaryButton}"
                 Content="Start"
                 Command="{Binding StartCommand}"/>
         <Button Grid.Column="2" Padding="14,3" Margin="7,0,0,0"
