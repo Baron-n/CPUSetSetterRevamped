@@ -126,6 +126,171 @@ namespace CPUSetSetter.Config
             }
         }
 
+        /// <summary>
+        /// Export the current config to a user-chosen file. Returns an error message, or null on success
+        /// </summary>
+        public static string? ExportToFile(string path)
+        {
+            try
+            {
+                ConfigJson configJson = new(AppConfig.Instance);
+                using FileStream fileStream = File.Create(path);
+                JsonSerializer.Serialize(fileStream, configJson, options: jsonOptions);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return $"Failed to export config: {ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// Import a config from a user-chosen file, replacing the current masks, rules, templates and settings.
+        /// Returns an error message, or null on success
+        /// </summary>
+        public static string? ImportFromFile(string path)
+        {
+            ConfigJson configJson;
+            try
+            {
+                using FileStream fileStream = File.OpenRead(path);
+                configJson = JsonSerializer.Deserialize<ConfigJson>(fileStream, options: jsonOptions) ?? throw new NullReferenceException();
+            }
+            catch (Exception ex)
+            {
+                return $"The selected file is not a valid config: {ex.Message}";
+            }
+
+            string? validationError = ValidateConfigJson(configJson);
+            if (validationError is not null)
+                return validationError;
+
+            try
+            {
+                ApplyImport(configJson);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return $"Failed to apply the imported config: {ex.Message}";
+            }
+        }
+
+        private static string? ValidateConfigJson(ConfigJson configJson)
+        {
+            if (!TryParseHotkeys(configJson.NoMaskHotkeys))
+                return "The config contains an invalid hotkey for the 'No mask' mask.";
+
+            var maskNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (LogicalProcessorMaskJson jsonMask in configJson.Masks)
+            {
+                if (!maskNames.Add(jsonMask.Name))
+                    return $"The config contains multiple masks named '{jsonMask.Name}'.";
+                if (jsonMask.BoolMask.Count != CpuInfo.LogicalProcessorCount)
+                    return $"The mask '{jsonMask.Name}' does not match this system ({jsonMask.BoolMask.Count} logical processors in the config vs {CpuInfo.LogicalProcessorCount} here).";
+                if (!Enum.TryParse<MaskApplyType>(jsonMask.MaskType, out _))
+                    return $"The mask '{jsonMask.Name}' has an invalid type '{jsonMask.MaskType}'.";
+                if (!TryParseHotkeys(jsonMask.Hotkeys))
+                    return $"The mask '{jsonMask.Name}' contains an invalid hotkey.";
+            }
+
+            foreach (ProgramRuleJson jsonRule in configJson.ProgramRules)
+            {
+                if (!maskNames.Contains(jsonRule.LogicalProcessorMaskName))
+                    return $"The rule for '{jsonRule.ProgramPath}' references a mask that does not exist ('{jsonRule.LogicalProcessorMaskName}').";
+                if (jsonRule.PriorityClass is not null && !Enum.TryParse<ProcessPriorityClass>(jsonRule.PriorityClass, out _))
+                    return $"The rule for '{jsonRule.ProgramPath}' has an invalid priority '{jsonRule.PriorityClass}'.";
+            }
+
+            foreach (RuleTemplateJson jsonTemplate in configJson.RuleTemplates)
+            {
+                if (!maskNames.Contains(jsonTemplate.LogicalProcessorMaskName))
+                    return $"The template for '{jsonTemplate.RuleGlob}' references a mask that does not exist ('{jsonTemplate.LogicalProcessorMaskName}').";
+            }
+
+            if (!Enum.TryParse<Theme>(configJson.UiTheme, out _))
+                return $"The config has an invalid theme '{configJson.UiTheme}'.";
+
+            return null;
+        }
+
+        private static bool TryParseHotkeys(List<string> hotkeys)
+        {
+            foreach (string hotkey in hotkeys)
+            {
+                if (!Enum.TryParse<VKey>(hotkey, out _))
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Replace the live config with the imported one, in-place on the singleton. Removal happens in a safe order:
+        /// templates, then rules (via TryRemove, which clears their processes), then masks (via Remove). The NoMask mask
+        /// is kept at the front and only its hotkeys are replaced
+        /// </summary>
+        private static void ApplyImport(ConfigJson configJson)
+        {
+            AppConfig config = AppConfig.Instance;
+
+            // 1. Remove all rule templates (their Dispose is safe to call directly)
+            while (config.RuleTemplates.Count > 0)
+                config.RuleTemplates.RemoveAt(config.RuleTemplates.Count - 1);
+
+            // 2. Remove all program rules. TryRemove sets their running processes to NoMask and disposes them safely
+            while (config.ProgramRules.Count > 0)
+                config.ProgramRules[0].TryRemove();
+
+            // 3. Remove all masks except the NoMask (index 0). Remove() disposes them and unregisters their hotkeys
+            for (int i = config.LogicalProcessorMasks.Count - 1; i >= 1; --i)
+                config.LogicalProcessorMasks[i].Remove();
+
+            // 4. Update the NoMask's hotkeys in place
+            List<VKey> noMaskHotkeys = configJson.NoMaskHotkeys.Select(hotkey => Enum.Parse<VKey>(hotkey)).ToList();
+            LogicalProcessorMask noMask = config.LogicalProcessorMasks.Single(mask => mask.MaskType == MaskApplyType.NoMask);
+            noMask.Hotkeys.Clear();
+            foreach (VKey hotkey in noMaskHotkeys)
+                noMask.Hotkeys.Add(hotkey);
+
+            // 5. Add the imported masks
+            foreach (LogicalProcessorMaskJson jsonMask in configJson.Masks)
+            {
+                List<VKey> hotkeys = jsonMask.Hotkeys.Select(hotkey => Enum.Parse<VKey>(hotkey)).ToList();
+                MaskApplyType maskType = Enum.Parse<MaskApplyType>(jsonMask.MaskType);
+                config.LogicalProcessorMasks.Add(new(jsonMask.Name, maskType, new(jsonMask.BoolMask), hotkeys));
+            }
+
+            // 6. Add the imported program rules (skipSetup = true; templates are matched afterwards)
+            foreach (ProgramRuleJson jsonRule in configJson.ProgramRules)
+            {
+                LogicalProcessorMask mask = config.LogicalProcessorMasks.Single(mask => string.Equals(mask.Name, jsonRule.LogicalProcessorMaskName, StringComparison.OrdinalIgnoreCase));
+                ProcessPriorityClass? priorityClass = jsonRule.PriorityClass is null
+                    ? null
+                    : Enum.Parse<ProcessPriorityClass>(jsonRule.PriorityClass);
+                config.ProgramRules.Add(new(jsonRule.ProgramPath, mask, jsonRule.AutoReapply, true, priorityClass));
+            }
+
+            // 7. Add the imported rule templates
+            foreach (RuleTemplateJson jsonTemplate in configJson.RuleTemplates)
+            {
+                LogicalProcessorMask mask = config.LogicalProcessorMasks.Single(mask => string.Equals(mask.Name, jsonTemplate.LogicalProcessorMaskName, StringComparison.OrdinalIgnoreCase));
+                config.RuleTemplates.Add(new(jsonTemplate.RuleGlob, mask));
+            }
+
+            // 8. Apply the imported settings
+            config.MuteHotkeySound = configJson.MuteHotKeySound;
+            config.StartMinimized = configJson.StartMinimized;
+            config.DisableWelcomeMessage = configJson.DisableWelcomeMessage;
+            config.ShowGameModePopup = configJson.ShowGameModePopup;
+            config.ShowUpdatePopup = configJson.ShowUpdatePopup;
+            config.ClearMasksOnClose = configJson.ClearMasksOnClose;
+            config.UiTheme = Enum.Parse<Theme>(configJson.UiTheme);
+
+            // 9. Match the new templates to the new rules and apply masks to any running processes
+            RuleTemplate.OnConfigLoaded();
+            config.Save();
+        }
+
         private static AppConfig JsonToConfig(ConfigJson configJson, bool generateDefaultMasks, bool isFirstRun, out bool hadSoftError)
         {
             hadSoftError = false;
