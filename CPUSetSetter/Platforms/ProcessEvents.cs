@@ -19,6 +19,19 @@
 
         public static void Start() => Default.Start();
 
+        /// <summary>
+        /// Create a process handler for a given PID, e.g. for the Benchmark feature.
+        /// Returns null when the process cannot be opened
+        /// </summary>
+        public static IProcessHandler? CreateProcessHandler(string name, uint pid)
+        {
+#if WINDOWS
+            return ProcessEventsWindows.CreateProcessHandler(name, pid);
+#else
+            return null;
+#endif
+        }
+
         private static IProcessEvents? _default;
 
 #if WINDOWS

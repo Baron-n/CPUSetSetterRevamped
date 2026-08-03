@@ -25,6 +25,11 @@ namespace CPUSetSetter.Platforms.Windows
         private MaskApplyType _previousMaskType = MaskApplyType.NoMask;
 
         /// <summary>
+        /// The query handle used for reading process information (CPU usage, current mask)
+        /// </summary>
+        internal SafeProcessHandle QueryHandle => _queryLimitedInfoHandle;
+
+        /// <summary>
         /// Logical processors of the currently applied CPU Set, used to correct the per-core display:
         /// a CPU Set confined thread's reported ideal processor is not updated
         /// </summary>
@@ -461,6 +466,30 @@ namespace CPUSetSetter.Platforms.Windows
                 return null;
             }
             return null;
+        }
+
+        /// <summary>
+        /// Read back the mask that is currently applied to this process, so it can be restored later.
+        /// CPU Sets take precedence over Affinity. Returns NoMask when the process is unrestricted.
+        /// </summary>
+        public LogicalProcessorMask? GetCurrentMask()
+        {
+            try
+            {
+                bool[] cpuSetMask = GetCpuSetMask();
+                if (cpuSetMask.Any(enabled => enabled))
+                    return new LogicalProcessorMask("(current)", MaskApplyType.CPUSet, cpuSetMask.ToList(), []);
+
+                bool[] affinityMask = GetAffinityMask();
+                if (affinityMask.All(enabled => enabled))
+                    return LogicalProcessorMask.NoMask;
+                return new LogicalProcessorMask("(current)", MaskApplyType.Affinity, affinityMask.ToList(), []);
+            }
+            catch (Exception)
+            {
+                // Process may have exited or refuse access
+                return null;
+            }
         }
 
         /// <summary>

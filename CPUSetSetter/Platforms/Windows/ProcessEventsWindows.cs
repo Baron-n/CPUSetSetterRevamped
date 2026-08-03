@@ -128,19 +128,38 @@ namespace CPUSetSetter.Platforms
 
         private static ProcessInfo ParseManagementProcess(string name, uint pid, string knownExecutablePath)
         {
-            SafeProcessHandle hProcess = NativeMethods.OpenProcess(ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-
             string exePath = knownExecutablePath;
-            if (!hProcess.IsInvalid)
+            IProcessHandler? processHandler = CreateProcessHandler(name, pid);
+            if (processHandler is ProcessHandlerWindows windowsHandler)
             {
-                char[] buffer = new char[1024];
-                uint size = 1024;
-                bool success = NativeMethods.QueryFullProcessImageNameW(hProcess, 0, buffer, ref size);
-                if (success)
-                    exePath = new string(buffer[..(int)size]);
+                SafeProcessHandle hProcess = windowsHandler.QueryHandle;
+                if (!hProcess.IsInvalid)
+                {
+                    char[] buffer = new char[1024];
+                    uint size = 1024;
+                    bool success = NativeMethods.QueryFullProcessImageNameW(hProcess, 0, buffer, ref size);
+                    if (success)
+                        exePath = new string(buffer[..(int)size]);
+                }
             }
 
-            return new(name, exePath, pid, new ProcessHandlerWindows(name, pid, hProcess));
+            // The process may have exited or denied access between enumeration and opening it.
+            // Keep a handler wrapping an invalid query handle so the process still shows up in the list
+            // (with no CPU data); set handles are still opened lazily when a mask is applied
+            processHandler ??= new ProcessHandlerWindows(name, pid, new SafeProcessHandle(IntPtr.Zero, false));
+            return new(name, exePath, pid, processHandler);
+        }
+
+        /// <summary>
+        /// Open a query-limited-information handle to the process, so CPU usage can be sampled and masks applied.
+        /// Returns null when the process cannot be opened (e.g. it exited or access is denied)
+        /// </summary>
+        public static IProcessHandler? CreateProcessHandler(string name, uint pid)
+        {
+            SafeProcessHandle hProcess = NativeMethods.OpenProcess(ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+            if (hProcess.IsInvalid)
+                return null;
+            return new ProcessHandlerWindows(name, pid, hProcess);
         }
     }
 }

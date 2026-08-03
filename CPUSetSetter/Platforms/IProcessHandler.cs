@@ -27,6 +27,13 @@ namespace CPUSetSetter.Platforms
         string? GetCurrentRestrictionInfo();
 
         /// <summary>
+        /// Read back the mask that is currently applied to this process as a <see cref="LogicalProcessorMask"/>,
+        /// so it can be restored later. Returns <see cref="LogicalProcessorMask.NoMask"/> when the process is
+        /// unrestricted, or null if the process is not accessible.
+        /// </summary>
+        LogicalProcessorMask? GetCurrentMask();
+
+        /// <summary>
         /// Set the priority class of the process. Pass null to leave it untouched
         /// </summary>
         bool ApplyPriority(ProcessPriorityClass? priorityClass);

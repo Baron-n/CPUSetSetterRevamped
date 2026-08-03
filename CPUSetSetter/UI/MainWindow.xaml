@@ -7,6 +7,7 @@
         xmlns:masks="clr-namespace:CPUSetSetter.UI.Tabs.Masks"
         xmlns:rules="clr-namespace:CPUSetSetter.UI.Tabs.Rules"
         xmlns:settings="clr-namespace:CPUSetSetter.UI.Tabs.Settings"
+        xmlns:benchmark="clr-namespace:CPUSetSetter.UI.Tabs.Processes.Benchmark"
         mc:Ignorable="d"
         Title="CPU Set Setter Revamped"
         Height="574"
@@ -22,6 +23,15 @@
             </TabItem.Header>
 
             <proc:ProcessesTab/>
+        </TabItem>
+
+        <!--Benchmark Tab-->
+        <TabItem x:Name="BenchmarkTabItem">
+            <TabItem.Header>
+                <TextBlock Text="Benchmark"/>
+            </TabItem.Header>
+
+            <benchmark:BenchmarkTab/>
         </TabItem>
 
         <!--Masks Tab-->

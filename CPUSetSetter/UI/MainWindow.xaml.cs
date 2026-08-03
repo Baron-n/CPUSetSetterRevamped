@@ -53,5 +53,13 @@ namespace CPUSetSetter.UI
                 ProcessesTabViewModel.Instance?.ResumeListUpdates();
             }
         }
+
+        /// <summary>
+        /// Switch to the Benchmark tab, refreshing its target list so it is never stale
+        /// </summary>
+        public void SelectBenchmarkTab()
+        {
+            BenchmarkTabItem.IsSelected = true;
+        }
     }
 }

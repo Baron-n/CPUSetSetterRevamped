@@ -29,6 +29,12 @@ namespace CPUSetSetter.UI.Tabs.Processes
             logBox.ScrollToEnd();
         }
 
+        private void Benchmark_Click(object sender, RoutedEventArgs e)
+        {
+            if (App.Current.MainWindow is MainWindow mainWindow)
+                mainWindow.SelectBenchmarkTab();
+        }
+
         /// <summary>
         /// Clicking a process row toggles its per-core details: click to show, click again to hide
         /// </summary>
