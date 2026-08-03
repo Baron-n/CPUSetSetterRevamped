@@ -24,9 +24,15 @@ namespace CPUSetSetter.UI.Tabs.Processes
 
             Loaded += (_, _) =>
             {
+                logBox.Document = WindowLogger.Default.LogDocument;
                 logBox.ScrollToEnd();
                 PreviewKeyDown += (_, e) => HandlePreviewKeyDown(e);
             };
+        }
+
+        private void Log_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            logBox.ScrollToEnd();
         }
 
         private void HandlePreviewKeyDown(System.Windows.Input.KeyEventArgs e)
@@ -36,11 +42,6 @@ namespace CPUSetSetter.UI.Tabs.Processes
                 searchBox.Focus();
                 e.Handled = true;
             }
-        }
-
-        private void Log_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            logBox.ScrollToEnd();
         }
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)

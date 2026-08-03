@@ -60,13 +60,20 @@ namespace CPUSetSetter.Platforms
         /// <summary>Whether the physical core has more than one thread (Hyper-Threading / SMT).</summary>
         public bool IsSMT { get; }
 
-        public LogicalProcessorTopologyInfo(int logicalProcessorIndex, int dieIndex, int coreIndex, int smtThreadIndex, bool isSMT)
+        /// <summary>
+        /// The efficiency class of the physical core this logical processor belongs to (only meaningful on
+        /// hybrid CPUs, e.g. Intel P/E cores). A higher number means the core has more performance
+        /// </summary>
+        public int EfficiencyClass { get; }
+
+        public LogicalProcessorTopologyInfo(int logicalProcessorIndex, int dieIndex, int coreIndex, int smtThreadIndex, bool isSMT, int efficiencyClass)
         {
             LogicalProcessorIndex = logicalProcessorIndex;
             DieIndex = dieIndex;
             CoreIndex = coreIndex;
             SMTThreadIndex = smtThreadIndex;
             IsSMT = isSMT;
+            EfficiencyClass = efficiencyClass;
         }
     }
 

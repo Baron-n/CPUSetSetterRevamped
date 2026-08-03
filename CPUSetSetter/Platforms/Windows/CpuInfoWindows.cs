@@ -135,7 +135,8 @@ namespace CPUSetSetter.Platforms
                 int dieIndex = dieRelations.FindIndex(die => (die.Affinities[0] & logicalProcessorMask) != 0);
 
                 bool isSMT = coreIndex >= 0 && _coreRelations[coreIndex].IsSMT;
-                topology.Add(new LogicalProcessorTopologyInfo(i, dieIndex, coreIndex, smtThreadIndex, isSMT));
+                int efficiencyClass = coreIndex >= 0 ? _coreRelations[coreIndex].EfficiencyClass : 0;
+                topology.Add(new LogicalProcessorTopologyInfo(i, dieIndex, coreIndex, smtThreadIndex, isSMT, efficiencyClass));
             }
             return topology;
         }

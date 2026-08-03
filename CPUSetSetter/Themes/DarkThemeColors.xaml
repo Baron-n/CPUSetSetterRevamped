@@ -52,4 +52,10 @@
     <SolidColorBrush x:Key="StatusPillBorderBrush" Color="#2E7D4F"/>
     <SolidColorBrush x:Key="StatusDotBrush" Color="#34D399"/>
 
+    <!-- Log colors -->
+    <SolidColorBrush x:Key="LogInfoBrush" Color="#9AA1AC"/>
+    <SolidColorBrush x:Key="LogSuccessBrush" Color="#34D399"/>
+    <SolidColorBrush x:Key="LogWarningBrush" Color="#FBBF24"/>
+    <SolidColorBrush x:Key="LogErrorBrush" Color="#F87171"/>
+
 </ResourceDictionary>

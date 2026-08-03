@@ -4,92 +4,138 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:CPUSetSetter.UI.Tabs.Processes.CoreUsage"
+             xmlns:uiConv="clr-namespace:CPUSetSetter.UI.Converters"
              mc:Ignorable="d"
              x:Name="root">
 
     <UserControl.Resources>
         <local:UtilityToBrushConverter x:Key="UtilityToBrushConverter"/>
+        <uiConv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
 
-    <Grid Margin="2,4">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!--Header-->
-        <Grid Grid.Row="0" Margin="2,0,2,4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+        <Grid Margin="2,0,2,6">
             <TextBlock Text="Core Usage"
                        FontWeight="SemiBold"
-                       FontSize="11"
-                       Foreground="{DynamicResource DisabledForegroundBrush}"/>
-            <TextBlock Grid.Column="1"
-                       FontSize="10.5"
-                       Foreground="{DynamicResource DisabledForegroundBrush}">
-                <Run Text="Total: "/>
-                <Run Text="{Binding TotalUsageStr, ElementName=root}" FontWeight="SemiBold"/>
-            </TextBlock>
+                       FontSize="12"
+                       Foreground="{DynamicResource DisabledForegroundBrush}"
+                       VerticalAlignment="Center"/>
+            <Border HorizontalAlignment="Right"
+                    Background="{DynamicResource StatusPillBackgroundBrush}"
+                    BorderBrush="{DynamicResource StatusPillBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="9"
+                    Padding="8,1.5"
+                    VerticalAlignment="Center"
+                    ToolTip="Average usage of all logical processors">
+                <TextBlock FontSize="10.5"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TitleBarForegroundBrush}">
+                    <Run Text="Total: "/>
+                    <Run Text="{Binding TotalUsageStr, ElementName=root}"/>
+                </TextBlock>
+            </Border>
         </Grid>
 
-        <!--Per-core heat cells-->
-        <ItemsControl Grid.Row="1" x:Name="coreUsagesItemsControl">
-
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <UniformGrid Rows="2"/>
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <!--Heat cell: filled by usage fraction, tinted gray when parked-->
-                    <Border Margin="1"
-                            CornerRadius="3"
-                            BorderThickness="0.5"
-                            BorderBrush="#40000000"
-                            SnapsToDevicePixels="True"
-                            ToolTip="{Binding Name}">
-
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="{Binding Utility, Converter={StaticResource UtilityToBrushConverter}}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsParked}" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource CoreUsageBarParkedBackgroundBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-
+        <!--Per-core heat cells, grouped side by side (e.g. P-Cores / E-Cores on hybrid Intel CPUs, CCDs on AMD),
+            with a vertical divider line between the groups-->
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl x:Name="coreUsageItemsControl">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="{Binding GroupCount, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
                         <Grid>
-                            <TextBlock Text="{Binding UtilityStr}"
-                                       Foreground="White"
-                                       FontSize="8"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center">
-                                <TextBlock.Effect>
-                                    <DropShadowEffect Color="Black" Opacity="0.6" BlurRadius="1.2" ShadowDepth="0.4"/>
-                                </TextBlock.Effect>
-                            </TextBlock>
-                            <TextBlock Text="{Binding Name}"
-                                       Foreground="White"
-                                       FontSize="5.5"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Bottom"
-                                       Margin="0,0,0,1">
-                                <TextBlock.Effect>
-                                    <DropShadowEffect Color="Black" Opacity="0.6" BlurRadius="1" ShadowDepth="0.3"/>
-                                </TextBlock.Effect>
-                            </TextBlock>
+                            <StackPanel Margin="6,0,6,8">
+                                <TextBlock Text="{Binding Name}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource DisabledForegroundBrush}"
+                                           Margin="2,0,0,3"/>
+                                <ItemsControl ItemsSource="{Binding Cores}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <!--Rectangular heat cell: readable %, name in a bottom strip, tinted gray when parked-->
+                                            <Border Width="108"
+                                                    Height="40"
+                                                    Margin="1.5"
+                                                    CornerRadius="6"
+                                                    BorderThickness="0.5"
+                                                    BorderBrush="#40000000"
+                                                    SnapsToDevicePixels="True"
+                                                    ToolTip="{Binding TooltipStr}">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="{Binding Utility, Converter={StaticResource UtilityToBrushConverter}}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsParked}" Value="True">
+                                                                <Setter Property="Background" Value="{DynamicResource CoreUsageBarParkedBackgroundBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid>
+                                                    <Border HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Background="#66000000"
+                                                            CornerRadius="5"
+                                                            Padding="8,2">
+                                                        <TextBlock Text="{Binding UtilityStr}"
+                                                                   Foreground="White"
+                                                                   FontSize="15"
+                                                                   FontWeight="Bold"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center">
+                                                            <TextBlock.Effect>
+                                                                <DropShadowEffect Color="Black" Opacity="0.6" BlurRadius="1.5" ShadowDepth="0.4"/>
+                                                            </TextBlock.Effect>
+                                                        </TextBlock>
+                                                    </Border>
+                                                    <Border VerticalAlignment="Bottom"
+                                                            Background="#66000000"
+                                                            CornerRadius="0,0,6,6"
+                                                            Padding="0,1">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   Foreground="White"
+                                                                   FontSize="8.5"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center">
+                                                            <TextBlock.Effect>
+                                                                <DropShadowEffect Color="Black" Opacity="0.5" BlurRadius="1" ShadowDepth="0.3"/>
+                                                            </TextBlock.Effect>
+                                                        </TextBlock>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                            <Border Width="1.5"
+                                    HorizontalAlignment="Right"
+                                    Margin="0,2,0,0"
+                                    Background="{DynamicResource BorderBrush}"
+                                    Visibility="{Binding ShowSeparator, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </Grid>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
     </Grid>
 </UserControl>

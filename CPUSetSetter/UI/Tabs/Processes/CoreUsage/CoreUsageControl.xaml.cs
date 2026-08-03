@@ -9,13 +9,15 @@ using System.Windows.Threading;
 namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
 {
     /// <summary>
-    /// Shows the usage with a bar for every logical processor in the system, with a different color when a processor is parked
-    /// Though technically not correct, "Core" just sounds a lot better than "logical processor"
+    /// Shows the usage with a bar for every logical processor in the system, with a different
+    /// color when a processor is parked. Though technically not correct, "Core" just sounds a
+    /// lot better than "logical processor"
     /// </summary>
     public partial class CoreUsageControl : UserControl
     {
         private static bool _isRunning = false;
         private static List<CoreUsage> coreUsages = CpuInfo.LogicalProcessorNames.Select(cpuName => new CoreUsage(cpuName)).ToList();
+        private static List<CoreUsageGroup> coreGroups = BuildCoreGroups();
         private static CoreUsageControl? _instance;
 
         // DependencyProperties
@@ -97,18 +99,101 @@ namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
             set => SetValue(TotalUsageStrProperty, value);
         }
 
+        /// <summary>
+        /// Number of core groups, used to lay the groups out side by side
+        /// </summary>
+        public static readonly DependencyProperty GroupCountProperty =
+            DependencyProperty.Register(nameof(GroupCount), typeof(int), typeof(CoreUsageControl), new PropertyMetadata(1));
+
+        public int GroupCount
+        {
+            get => (int)GetValue(GroupCountProperty);
+            set => SetValue(GroupCountProperty, value);
+        }
+
         public CoreUsageControl()
         {
             InitializeComponent();
             _instance = this;
 
-            coreUsagesItemsControl.ItemsSource = coreUsages;
+            coreUsageItemsControl.ItemsSource = coreGroups;
+            GroupCount = coreGroups.Count;
 
             if (!_isRunning)
             {
                 _isRunning = true;
                 Task.Run(async () => await PerCoreUsageUpdateLoop(Dispatcher));
             }
+        }
+
+        /// <summary>
+        /// Split the logical processors into named groups, using whatever the topology makes available:
+        /// P-Cores / E-Cores (plus LPE) on Intel hybrid CPUs, and a per-die group (CCD on AMD) on
+        /// multi-die CPUs. Everything else falls back to a single "Cores" group. The returned groups
+        /// share the same <see cref="CoreUsage"/> instances as the flat sampler list, so updating the
+        /// sampler automatically updates the grouped display
+        /// </summary>
+        private static List<CoreUsageGroup> BuildCoreGroups()
+        {
+            IReadOnlyList<LogicalProcessorTopologyInfo> topology = CpuInfo.LogicalProcessorTopology;
+            if (topology.Count != coreUsages.Count)
+                return [new("Cores", coreUsages)];
+
+            // Intel hybrid CPUs: group by efficiency class (P-Cores / E-Cores, plus LPE if present)
+            if (CpuInfo.Manufacturer == Manufacturer.Intel)
+            {
+                List<int> efficiencyClasses = topology
+                    .Select(t => t.EfficiencyClass)
+                    .Distinct()
+                    .OrderByDescending(e => e)
+                    .ToList();
+
+                if (efficiencyClasses.Count > 1)
+                {
+                    string[] groupNames = ["P-Cores", "E-Cores", "LPE-Cores"];
+                    List<CoreUsageGroup> groups = [];
+                    for (int i = 0; i < efficiencyClasses.Count && i < groupNames.Length; ++i)
+                    {
+                        int efficiencyClass = efficiencyClasses[i];
+                        groups.Add(new(groupNames[i], CoresInGroup(topology, j => topology[j].EfficiencyClass == efficiencyClass)));
+                    }
+                    groups[^1].ShowSeparator = false;
+                    return groups;
+                }
+            }
+
+            // Multi-die CPUs (e.g. multi-CCD AMD): group by die/CCX when more than one die is present
+            List<int> dies = topology
+                .Select(t => t.DieIndex)
+                .Where(die => die >= 0)
+                .Distinct()
+                .OrderBy(die => die)
+                .ToList();
+            if (dies.Count > 1)
+            {
+                string dieName = CpuInfo.Manufacturer == Manufacturer.AMD ? "CCD" : "Die";
+                List<CoreUsageGroup> dieGroups = [];
+                foreach (int die in dies)
+                    dieGroups.Add(new($"{dieName} {die}", CoresInGroup(topology, j => topology[j].DieIndex == die)));
+                dieGroups[^1].ShowSeparator = false;
+                return dieGroups;
+            }
+
+            return [new("Cores", coreUsages)];
+        }
+
+        /// <summary>
+        /// Collect the <see cref="CoreUsage"/> instances whose matching topology entry passes the predicate
+        /// </summary>
+        private static List<CoreUsage> CoresInGroup(IReadOnlyList<LogicalProcessorTopologyInfo> topology, Func<int, bool> predicate)
+        {
+            List<CoreUsage> groupCores = [];
+            for (int j = 0; j < coreUsages.Count; ++j)
+            {
+                if (predicate(j))
+                    groupCores.Add(coreUsages[j]);
+            }
+            return groupCores;
         }
 
         private static async Task PerCoreUsageUpdateLoop(Dispatcher dispatcher)
@@ -191,6 +276,25 @@ namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
 
                 await Task.Delay(1500);
             }
+        }
+    }
+
+    /// <summary>
+    /// A named group of logical processor heat cells, e.g. the P-Cores / E-Cores of a hybrid CPU
+    /// or a single CCD on AMD
+    /// </summary>
+    public class CoreUsageGroup
+    {
+        public string Name { get; }
+        public IReadOnlyList<CoreUsage> Cores { get; }
+
+        /// <summary>Whether a vertical divider line is drawn after this group (false for the last group)</summary>
+        public bool ShowSeparator { get; set; } = true;
+
+        public CoreUsageGroup(string name, IReadOnlyList<CoreUsage> cores)
+        {
+            Name = name;
+            Cores = cores;
         }
     }
 }

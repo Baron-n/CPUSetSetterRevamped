@@ -238,7 +238,7 @@ namespace CPUSetSetter.Platforms.Windows
             {
                 case MaskApplyType.NoMask:
                     // Clear both restriction types so the process is fully unrestricted, regardless of the tracked state
-                    bool affinityCleared = ApplyAffinity(mask);
+                    bool affinityCleared = ClearAffinitySkippingAllCores();
                     bool cpuSetCleared = ApplyCpuSet(mask);
                     // A partial clear is a failure: the process stays constrained to whatever was not cleared
                     result = affinityCleared && cpuSetCleared;
@@ -249,7 +249,7 @@ namespace CPUSetSetter.Platforms.Windows
                 case MaskApplyType.CPUSet:
                     // Always clear the Affinity first: if a stale Affinity overlaps the CPU Set badly (e.g. empty intersection),
                     // the threads would keep running on the Affinity's cores instead of the CPU Set's
-                    bool affinityClearedBeforeCpuSet = ApplyAffinity(LogicalProcessorMask.NoMask);
+                    bool affinityClearedBeforeCpuSet = ClearAffinitySkippingAllCores();
                     result = ApplyCpuSet(mask);
                     if (!affinityClearedBeforeCpuSet)
                         WindowLogger.Write($"WARNING: Could not clear Affinity of '{_executableName}' before applying CPU Set; a stale Affinity will constrain the CPU Set");
@@ -637,6 +637,33 @@ namespace CPUSetSetter.Platforms.Windows
             extraHelpString = (error == 5 && !Environment.IsPrivilegedProcess) ? " Try restarting CPU Set Setter Revamped as Admin" : " Likely due to anti-cheat";
             WindowLogger.Write($"ERROR: Could not apply Affinity to '{_executableName}': {new Win32Exception(error).Message}{extraHelpString}");
             return false;
+        }
+
+        /// <summary>
+        /// Clear the process Affinity, but skip the syscall entirely when it is already unrestricted
+        /// (every logical processor enabled). This avoids a guaranteed-failed clear for processes that
+        /// only allow querying their Affinity, and removes an unnecessary syscall for every other
+        /// process. When the current Affinity cannot be read, or is genuinely restricted, it falls back
+        /// to the normal clear behavior
+        /// </summary>
+        private bool ClearAffinitySkippingAllCores()
+        {
+            try
+            {
+                bool[] affinityMask = GetAffinityMask();
+                if (affinityMask.All(enabled => enabled))
+                    return true;
+            }
+            catch (InvalidOperationException)
+            {
+                // The current Affinity could not be read; fall back to attempting the clear
+            }
+            catch (Win32Exception)
+            {
+                // The current Affinity could not be read; fall back to attempting the clear
+            }
+
+            return ApplyAffinity(LogicalProcessorMask.NoMask);
         }
 
         private bool[] GetAffinityMask()

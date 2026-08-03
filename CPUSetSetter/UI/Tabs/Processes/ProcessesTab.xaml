@@ -15,7 +15,7 @@
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="*" MinHeight="80"/>
         <RowDefinition Height="2"/>
-        <RowDefinition Height="142" MinHeight="80" MaxHeight="350"/>
+        <RowDefinition Height="300" MinHeight="200" MaxHeight="600"/>
     </Grid.RowDefinitions>
 
     <Grid.Resources>
@@ -191,9 +191,10 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <!--Fixed-size heat cell: wraps to new rows when the window is narrow, so nothing overlaps-->
-                                    <Border Width="42"
-                                            Height="24"
+                                    <!--Fixed-size heat cell: wraps to new rows when the window is narrow, so nothing overlaps.
+                                        The % sits on a dark badge so it stays readable over the bright heat colors-->
+                                    <Border Width="44"
+                                            Height="26"
                                             Margin="1"
                                             CornerRadius="3"
                                             SnapsToDevicePixels="True"
@@ -202,23 +203,29 @@
                                             BorderThickness="0.5"
                                             ToolTip="{Binding TooltipStr}">
                                         <Grid>
-                                            <TextBlock Text="{Binding UtilityStr}"
-                                                       Foreground="White"
-                                                       FontSize="10"
-                                                       FontWeight="Bold"
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center">
-                                                <TextBlock.Effect>
-                                                    <DropShadowEffect Color="Black" Opacity="0.5" BlurRadius="1.5" ShadowDepth="0.5"/>
-                                                </TextBlock.Effect>
-                                            </TextBlock>
+                                            <Border HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Background="#66000000"
+                                                    CornerRadius="3"
+                                                    Padding="4,1">
+                                                <TextBlock Text="{Binding UtilityStr}"
+                                                           Foreground="White"
+                                                           FontSize="10.5"
+                                                           FontWeight="Bold"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center">
+                                                    <TextBlock.Effect>
+                                                        <DropShadowEffect Color="Black" Opacity="0.6" BlurRadius="1" ShadowDepth="0.3"/>
+                                                    </TextBlock.Effect>
+                                                </TextBlock>
+                                            </Border>
                                             <Border VerticalAlignment="Bottom"
                                                     Height="9"
-                                                    Background="#33000000"
+                                                    Background="#66000000"
                                                     CornerRadius="0,0,3,3">
                                                 <TextBlock Text="{Binding Name}"
                                                            Foreground="White"
-                                                           FontSize="6.5"
+                                                           FontSize="7"
                                                            HorizontalAlignment="Center"
                                                            VerticalAlignment="Center"/>
                                             </Border>
@@ -389,25 +396,29 @@
 
     <!--Core Usage and Log-->
     <Grid Grid.Row="3">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" MinHeight="100"/>
+            <RowDefinition Height="2"/>
+            <RowDefinition Height="*" MinHeight="80"/>
+        </Grid.RowDefinitions>
 
         <!-- Core Usage -->
-        <GroupBox Grid.Column="0" Header="Core Usage">
-            <coreuse:CoreUsageControl/>
-        </GroupBox>
+        <coreuse:CoreUsageControl Grid.Row="0" Margin="0,0,0,2"/>
+
+        <GridSplitter Grid.Row="1"
+                      HorizontalAlignment="Stretch"
+                      ResizeDirection="Rows"
+                      Background="{DynamicResource BorderBrush}"/>
 
         <!--Log-->
-        <GroupBox Grid.Column="1"
-                  Margin="2,0,0,0"
-                  Header="Log">
-            <TextBox x:Name="logBox"
-                     IsReadOnly="True"
-                     Text="{Binding Text, Source={x:Static local:WindowLogger.Default}}"
-                     TextChanged="Log_TextChanged"
-                     TextWrapping="Wrap"/>
+        <GroupBox Grid.Row="2" Header="Log" Margin="0,2,0,0">
+            <RichTextBox x:Name="logBox"
+                         IsReadOnly="True"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         Foreground="{DynamicResource ForegroundBrush}"
+                         FontSize="11"
+                         TextChanged="Log_TextChanged"/>
         </GroupBox>
     </Grid>
 </Grid>
