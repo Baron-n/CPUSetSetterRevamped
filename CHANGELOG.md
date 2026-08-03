@@ -2,6 +2,12 @@
 
 ## Revamped
 
+### v3.0.0
+
+#### New features
+- **Benchmark tab.** Compare how a target process behaves under different CPU masks scientifically. Pick a running process (or browse to an executable), choose candidate masks (including a "No mask" baseline), and let the app apply each one for a set duration while sampling the process's average and per-core CPU usage. Results are ranked best-to-worst with a color-coded comparison bar and can be exported to a CSV file. The target's original mask is restored afterwards, and the run can be cancelled at any time.
+- **Config export/import.** One-click backup and restore of your entire setup from the Settings tab. Masks, program rules, rule templates, hotkeys and settings are exported to a JSON file (or imported from one) with full validation, so you can move your configuration between machines or recover it after a reinstall. Importing replaces the current config and asks for confirmation first.
+
 ### v2.8.0
 
 #### Bug fixes

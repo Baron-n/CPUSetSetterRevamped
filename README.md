@@ -13,6 +13,8 @@ Make your games and apps run on the right CPU cores &mdash; for smoother perform
 > **Note on Windows 10:** The Windows 10 CPU Set APIs are fully supported, so the app works normally on Windows 10. However, Microsoft only officially supports the .NET 10 runtime on Windows 10 **LTSC/Enterprise** editions (21H2/1809/1607), since consumer Windows 10 reached end-of-life in October 2025. On a consumer Windows 10 machine the app will still run in practice, but this combination is not an officially supported .NET scenario. Additionally, systems with more than 64 CPU threads (multiple processor groups) are not supported.
 
 # What's new in Revamped
+- **Benchmark tab.** Compare how a game or app runs under different CPU masks — apply each candidate mask to a target process for a set duration, see average and per-core CPU usage, and export the ranked results to CSV.
+- **Config export/import.** Back up or restore your masks, rules, templates, hotkeys and settings from a JSON file in the Settings tab.
 - **CPU Sets now apply to running threads.** The OS only applies a process default CPU Set to threads created *after* it is set; Revamped also pins every existing thread, so a CPU Set takes effect immediately instead of "eventually" (or never for long-lived processes).
 - **Affinity and CPU Sets can no longer conflict.** The other restriction type is always cleared before applying a mask, fixing the stale-affinity "empty intersection" where threads refused to move.
 - **"Clear mask on close" actually clears.** Both restriction types are removed, instead of failing with an error.
