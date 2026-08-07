@@ -2,6 +2,16 @@
 
 ## Revamped
 
+### v4.0.0
+
+#### New features
+- **Modern UI revamp.** Custom title bar and live status pill, a redesigned Processes tab with a readable Core Usage panel grouped by P-/E-cores on hybrid Intel CPUs and by CCD on AMD (with a Total pill), a color-coded Log panel (errors red, warnings amber) and compact heat cells that only turn red when a core is actually busy.
+- **Skipping redundant Affinity clears.** Clearing a mask on an already-unrestricted process no longer issues a pointless `SetProcessAffinityMask` call, removing the misleading "Could not clear Affinity" warning on anti-cheat-protected processes like Fortnite.
+- **No CPU polling in the background.** All per-process and per-core CPU usage sampling stops when the app is minimized to the taskbar or the system tray; manual applies keep working. (Previously this only applied to the tray.)
+- **On-disk log file.** Every log message and unhandled exception is written to `%APPDATA%\CPUSetSetter\log.txt`, making it easy to report issues after the fact.
+- **Apply the best benchmark mask.** When a benchmark finishes, the app asks whether to apply the best-performing mask to the target process.
+- **Discord server.** Join our community Discord from the Settings tab (About section), or directly: <https://discord.gg/PDF7RS9y9t>
+
 ### v3.0.0
 
 #### New features

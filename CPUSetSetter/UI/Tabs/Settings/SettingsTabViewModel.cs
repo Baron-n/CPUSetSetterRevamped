@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Diagnostics;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CPUSetSetter.Config;
@@ -24,6 +25,12 @@ namespace CPUSetSetter.UI.Tabs.Settings
         private static void OpenReleasePage()
         {
             VersionChecker.OpenLatestReleasePage();
+        }
+
+        [RelayCommand]
+        private static void OpenDiscord()
+        {
+            Process.Start(new ProcessStartInfo { FileName = "https://discord.gg/PDF7RS9y9t", UseShellExecute = true });
         }
 
         partial void OnAutoStartEnabledChanged(bool value)

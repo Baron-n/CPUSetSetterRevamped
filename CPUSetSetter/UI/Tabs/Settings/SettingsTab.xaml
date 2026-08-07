@@ -109,6 +109,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="20"/>
                 <RowDefinition Height="25"/>
+                <RowDefinition Height="30"/>
                 <RowDefinition Height="24"/>
             </Grid.RowDefinitions>
 
@@ -136,6 +137,12 @@
                     </Style>
                 </Button.Style>
             </Button>
+
+            <Button Grid.Row="3"
+                    Command="{Binding OpenDiscordCommand}"
+                    Content="Join our Discord server"
+                    Width="150"
+                    HorizontalAlignment="Left"/>
         </Grid>
     </GroupBox>
 
