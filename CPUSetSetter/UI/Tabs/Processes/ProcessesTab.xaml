@@ -15,7 +15,7 @@
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="*" MinHeight="80"/>
         <RowDefinition Height="2"/>
-        <RowDefinition Height="300" MinHeight="200" MaxHeight="600"/>
+        <RowDefinition Height="142" MinHeight="80" MaxHeight="350"/>
     </Grid.RowDefinitions>
 
     <Grid.Resources>
@@ -193,8 +193,8 @@
                                 <DataTemplate>
                                     <!--Fixed-size heat cell: wraps to new rows when the window is narrow, so nothing overlaps.
                                         The % sits on a dark badge so it stays readable over the bright heat colors-->
-                                    <Border Width="44"
-                                            Height="26"
+                                    <Border Width="36"
+                                            Height="22"
                                             Margin="1"
                                             CornerRadius="3"
                                             SnapsToDevicePixels="True"
@@ -207,10 +207,10 @@
                                                     VerticalAlignment="Center"
                                                     Background="#66000000"
                                                     CornerRadius="3"
-                                                    Padding="4,1">
+                                                    Padding="3,0.5">
                                                 <TextBlock Text="{Binding UtilityStr}"
                                                            Foreground="White"
-                                                           FontSize="10.5"
+                                                           FontSize="9"
                                                            FontWeight="Bold"
                                                            HorizontalAlignment="Center"
                                                            VerticalAlignment="Center">
@@ -220,12 +220,12 @@
                                                 </TextBlock>
                                             </Border>
                                             <Border VerticalAlignment="Bottom"
-                                                    Height="9"
+                                                    Height="7"
                                                     Background="#66000000"
                                                     CornerRadius="0,0,3,3">
                                                 <TextBlock Text="{Binding Name}"
                                                            Foreground="White"
-                                                           FontSize="7"
+                                                           FontSize="6.5"
                                                            HorizontalAlignment="Center"
                                                            VerticalAlignment="Center"/>
                                             </Border>
@@ -394,24 +394,18 @@
                   HorizontalAlignment="Stretch"
                   ResizeDirection="Rows"/>
 
-    <!--Core Usage and Log-->
+    <!--Core Usage and Log, side by side like the original CPU Set Setter: Core Usage fixed at 250, Log takes the rest-->
     <Grid Grid.Row="3">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" MinHeight="100"/>
-            <RowDefinition Height="2"/>
-            <RowDefinition Height="*" MinHeight="80"/>
-        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*" MinWidth="120"/>
+        </Grid.ColumnDefinitions>
 
         <!-- Core Usage -->
-        <coreuse:CoreUsageControl Grid.Row="0" Margin="0,0,0,2"/>
-
-        <GridSplitter Grid.Row="1"
-                      HorizontalAlignment="Stretch"
-                      ResizeDirection="Rows"
-                      Background="{DynamicResource BorderBrush}"/>
+        <coreuse:CoreUsageControl Grid.Column="0" Margin="0,0,2,0"/>
 
         <!--Log-->
-        <GroupBox Grid.Row="2" Header="Log" Margin="0,2,0,0">
+        <GroupBox Grid.Column="1" Header="Log" Margin="2,0,0,0">
             <RichTextBox x:Name="logBox"
                          IsReadOnly="True"
                          BorderThickness="0"
