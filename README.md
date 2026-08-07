@@ -58,11 +58,21 @@ To most optimally use CPU Set Setter Revamped, you may have to first follow some
 [Intel CPU setup](docs/setup/Intel.md)
 
 # Screenshots
-![](Images/ProcessesTab.png)
 
-![](Images/MasksTab.png)
+### Processes tab
+![Processes tab](Images/ProcessesTab.png)
 
-![](Images/RulesTab.png)
+### Masks tab
+![Masks tab](Images/MasksTab.png)
+
+### Rules tab
+![Rules tab](Images/RulesTab.png)
+
+### Benchmark tab
+![Benchmark tab](Images/BenchmarkTab.png)
+
+### Settings tab
+![Settings tab](Images/SettingsTab.png)
 
 # CPU Sets vs Affinity
 But what are these CPU Sets you speak of? Aren't they just Affinities?
