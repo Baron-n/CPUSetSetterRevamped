@@ -6,18 +6,16 @@ using System.Windows.Media;
 namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
 {
     /// <summary>
-    /// Maps a core usage value (0..1) to a heat color: gray at idle, rising through green/yellow/orange to red
+    /// Maps a core usage value (0..1) to a calm, muted color that only turns red once usage is high,
+    /// avoiding the rainbow of vibrant heat colors that made the cells look loud
     /// </summary>
     public class UtilityToBrushConverter : IValueConverter
     {
-        private static readonly (double Stop, Color Color)[] Gradient =
-        [
-            (0.00, Color.FromRgb(0xE0, 0xE0, 0xE0)),
-            (0.25, Color.FromRgb(0x66, 0xBB, 0x6A)),
-            (0.50, Color.FromRgb(0xFF, 0xEE, 0x58)),
-            (0.75, Color.FromRgb(0xFF, 0x98, 0x00)),
-            (1.00, Color.FromRgb(0xE5, 0x39, 0x35)),
-        ];
+        private const double HighThreshold = 0.80;
+
+        // Muted slate for anything below the threshold, so cells stay calm; red only appears as usage rises high
+        private static readonly Color Muted = Color.FromRgb(0x33, 0x36, 0x3A);
+        private static readonly Color Hot = Color.FromRgb(0xD9, 0x2B, 0x2B);
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
@@ -33,17 +31,11 @@ namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
 
         private static Color GetColor(double t)
         {
-            for (int i = 0; i < Gradient.Length - 1; ++i)
-            {
-                (double Stop, Color Color) from = Gradient[i];
-                (double Stop, Color Color) to = Gradient[i + 1];
-                if (t <= to.Stop)
-                {
-                    double local = to.Stop == from.Stop ? 0 : (t - from.Stop) / (to.Stop - from.Stop);
-                    return Lerp(from.Color, to.Color, local);
-                }
-            }
-            return Gradient[^1].Color;
+            if (t <= HighThreshold)
+                return Muted;
+
+            double ratio = Math.Clamp((t - HighThreshold) / (1.0 - HighThreshold), 0.0, 1.0);
+            return Lerp(Muted, Hot, ratio);
         }
 
         private static Color Lerp(Color a, Color b, double t)
