@@ -13,6 +13,7 @@ Make your games and apps run on the right CPU cores &mdash; for smoother perform
 - **.NET Desktop Runtime 10** (Follow in-app instructions)
 
 > **Note on Windows 10:** The Windows 10 CPU Set APIs are fully supported, so the app works normally on Windows 10. However, Microsoft only officially supports the .NET 10 runtime on Windows 10 **LTSC/Enterprise** editions (21H2/1809/1607), since consumer Windows 10 reached end-of-life in October 2025. On a consumer Windows 10 machine the app will still run in practice, but this combination is not an officially supported .NET scenario. Additionally, systems with more than 64 CPU threads (multiple processor groups) are not supported.
+> **DOWNLOAD HERE OR RELEASES SECTION:** <https://github.com/Baron-n/CPUSetSetterRevamped/releases/download/v4.0.0/CPU-Set-Setter-Revamped-v4.0.0-setup.exe>
 
 # What's new in Revamped
 - **Benchmark tab.** Compare how a game or app runs under different CPU masks — apply each candidate mask to a target process for a set duration, see average and per-core CPU usage, and export the ranked results to CSV.
