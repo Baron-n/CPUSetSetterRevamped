@@ -75,11 +75,3 @@ This makes them better fit in almost every scenario.
 
 # Credits
 CPU Set Setter Revamped builds on the excellent work of [CPU Set Setter](https://github.com/SimonvBez/CPUSetSetter) by [SimonvBez](https://github.com/SimonvBez) &mdash; the core app, CPU Sets/Affinity handling, rules, hotkeys and masks are all theirs. This fork adds fixes and the per-core usage heatmap on top of that foundation. Thanks for making it free and open-source!
-
-# Donations
-CPU Set Setter Revamped is free and open-source, just like the original. If you appreciate the project, consider supporting the original author:
-<br>
-- Become a [GitHub sponsor](https://github.com/sponsors/SimonvBez)
-- Donate directly with [PayPal](https://paypal.me/SimonvBez)
-
-It'd be infinitely appreciated and will help maintain and expand the tool in the future.
