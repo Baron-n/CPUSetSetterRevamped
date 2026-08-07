@@ -239,9 +239,10 @@ namespace CPUSetSetter.UI.Tabs.Processes.CoreUsage
             bool[] parkedValues = new bool[coreUsages.Count];
             while (true)
             {
-                // Pause the core usage sampling while minimized to the system tray, to reduce CPU usage in the background
+                // Pause the core usage sampling while minimized to the system tray or taskbar, to reduce CPU usage in the background
                 bool windowIsVisible = await dispatcher.InvokeAsync(() =>
-                    App.Current.MainWindow.Visibility == Visibility.Visible);
+                    App.Current.MainWindow.Visibility == Visibility.Visible
+                    && App.Current.MainWindow.WindowState != WindowState.Minimized);
 
                 if (windowIsVisible)
                 {

@@ -216,10 +216,11 @@ namespace CPUSetSetter.UI.Tabs.Processes
             {
                 await _dispatcher.InvokeAsync(() =>
                 {
-                    bool windowIsVisible = App.Current.MainWindow.Visibility == Visibility.Visible;
+                    bool windowIsVisible = App.Current.MainWindow.Visibility == Visibility.Visible
+                        && App.Current.MainWindow.WindowState != WindowState.Minimized;
 
-                    // Pause CPU usage, per-core usage and live sorting while minimized to the system tray,
-                    // to reduce CPU usage in the background
+                    // Pause CPU usage, per-core usage and live sorting while minimized to the system tray
+                    // or the taskbar, to reduce CPU usage in the background
                     if (!windowIsVisible)
                     {
                         _sortingPausedByTray = true;

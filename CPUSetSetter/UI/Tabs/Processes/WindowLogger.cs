@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CPUSetSetter.Util;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
@@ -37,6 +38,9 @@ namespace CPUSetSetter.UI.Tabs.Processes
             using (_lock.EnterScope())
             {
                 _logLines.Enqueue(message + "\n");
+
+                // Mirror every message to the on-disk log so history survives restart and tray use
+                FileLogger.Write(message);
 
                 // Begin updating the logger in the UI
                 // A small delay is used before updating, so multiple logs can be rendered in one go

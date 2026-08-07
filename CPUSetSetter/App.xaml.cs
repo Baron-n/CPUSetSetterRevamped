@@ -6,6 +6,7 @@ using CPUSetSetter.Util;
 using Microsoft.Win32;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
 
@@ -23,6 +24,10 @@ namespace CPUSetSetter
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Mirror the in-app log and record unhandled exceptions to a file on disk
+            FileLogger.Initialize();
+            AddCrashLogExceptionHandlers();
+
             // Show unhandled exceptions in an error dialog box
             AddDialogExceptionHandler();
 
@@ -103,8 +108,23 @@ namespace CPUSetSetter
         {
             DispatcherUnhandledException += (_, e) =>
             {
+                // Record the dispatcher exception before showing the existing error dialog
+                FileLogger.WriteException("an unhandled dispatcher exception", e.Exception);
                 MessageBox.Show($"An error occurred: {e.Exception}\n{e.Exception.StackTrace}", "Unhandled error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
+        }
+
+        /// <summary>
+        /// Write exceptions raised on other threads (AppDomain / background tasks) to the on-disk log.
+        /// No dialog is shown for these, matching prior behaviour
+        /// </summary>
+        private void AddCrashLogExceptionHandlers()
+        {
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+                FileLogger.WriteException("an unhandled exception on another thread", e.ExceptionObject as Exception ?? new Exception(e.ExceptionObject?.ToString()));
+
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+                FileLogger.WriteException("an unobserved task exception", e.Exception);
         }
 
         private static void SetAppCulture()
