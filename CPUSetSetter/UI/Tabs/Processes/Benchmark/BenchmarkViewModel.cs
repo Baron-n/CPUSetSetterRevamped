@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -167,7 +168,7 @@ namespace CPUSetSetter.UI.Tabs.Processes.Benchmark
             {
                 await RunBenchmarkAsync(SelectedTarget, selected, duration, _cts.Token);
                 if (!_cts.IsCancellationRequested)
-                    StatusText = "Benchmark complete. The original mask was restored.";
+                    OfferBestMask(processEntry);
             }
             catch (OperationCanceledException)
             {
@@ -285,6 +286,49 @@ namespace CPUSetSetter.UI.Tabs.Processes.Benchmark
                 if (ownsOriginalMask)
                     originalMask.Dispose();
             }
+        }
+
+        /// <summary>
+        /// After the benchmark (and its mask restore), ask the user whether to apply the best-performing mask to the
+        /// target process. Lower average CPU usage is considered better. Applied via the process entry so it behaves
+        /// exactly like picking the mask in the process list (rule is created or updated too)
+        /// </summary>
+        private void OfferBestMask(ProcessListEntryViewModel? processEntry)
+        {
+            if (processEntry is null)
+            {
+                StatusText = "Benchmark complete. The original mask was restored.";
+                return;
+            }
+
+            BenchmarkResultEntry? best = Results
+                .Where(result => result.Status == BenchmarkStatus.Completed && result.AverageCpuPercent is not null)
+                .OrderBy(result => result.AverageCpuPercent)
+                .FirstOrDefault();
+            BenchmarkCandidateViewModel? bestCandidate = best is null
+                ? null
+                : Candidates.FirstOrDefault(candidate => candidate.DisplayName == best.MaskDisplayName);
+
+            if (best is null || bestCandidate is null)
+            {
+                StatusText = "Benchmark complete. The original mask was restored.";
+                return;
+            }
+
+            MessageBoxResult choice = MessageBox.Show(
+                $"The best mask was '{bestCandidate.DisplayName}' ({best.AverageCpuPercent!.Value:F1}% average CPU).\n\nApply it to '{processEntry.Name}' now?",
+                "Benchmark complete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (choice != MessageBoxResult.Yes)
+            {
+                StatusText = $"Benchmark complete. Best mask '{bestCandidate.DisplayName}' was not applied.";
+                return;
+            }
+
+            processEntry.SetMask(bestCandidate.Mask, true);
+            StatusText = $"Applied best mask '{bestCandidate.DisplayName}' to '{processEntry.Name}'.";
         }
 
         private static string FormatBusiestCores(double[] perCoreSums, int perCoreCount)
